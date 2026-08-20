@@ -1,0 +1,23 @@
+# Environment & secrets
+.env
+
+# Go build artifacts
+bin/
+*.exe
+*.test
+*.out
+
+# Frontend dependencies & build output
+frontend/node_modules/
+web/dist/
+
+# Generated index cache
+data/index.json
+
+# OS & editor
+.DS_Store
+.idea/
+.vscode/
+
+# Cloned docs repo metadata (content lives under data/docs/)
+data/docs/.git/

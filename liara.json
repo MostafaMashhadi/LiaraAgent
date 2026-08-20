@@ -1,0 +1,11 @@
+{
+  "platform": "docker",
+  "app": "liara-helper-agent",
+  "port": 8080,
+  "disks": [
+    {
+      "name": "agent-data",
+      "mountTo": "/app/data"
+    }
+  ]
+}
