@@ -1,0 +1,60 @@
+services:
+  # 1. PostgreSQL Database Service
+  postgres:
+    image: postgres:16-alpine
+    container_name: liara-helper-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-liara}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-liarapass}
+      POSTGRES_DB: ${POSTGRES_DB:-liaradb}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-liara} -d ${POSTGRES_DB:-liaradb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - liara-network
+
+  # 2. Liara Helper Agent Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: liara-helper-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://${POSTGRES_USER:-liara}:${POSTGRES_PASSWORD:-liarapass}@postgres:5432/${POSTGRES_DB:-liaradb}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-liara-agent-jwt-super-secret-key-2026}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@liara.ir}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@Liara2026!}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_CHAT_MODEL: ${LLM_CHAT_MODEL:-gpt-4o-mini}
+      LLM_EMBEDDING_MODEL: ${LLM_EMBEDDING_MODEL:-text-embedding-3-small}
+      DOCS_DIR: /app/data/docs/src/pages
+      INDEX_PATH: /app/data/index.json
+    volumes:
+      - agent_data:/app/data
+    networks:
+      - liara-network
+
+volumes:
+  postgres_data:
+    driver: local
+  agent_data:
+    driver: local
+
+networks:
+  liara-network:
+    driver: bridge
