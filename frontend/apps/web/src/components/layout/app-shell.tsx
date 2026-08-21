@@ -114,18 +114,7 @@ export function AppShell({
           <HeaderSearch onSelectDoc={onSelectDoc} />
 
           {/* Top Left (RTL end) Action Icons & User Info */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-            <div
-              className={cn(
-                'hidden sm:inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium',
-                isWsConnected ? 'border-mint/30 bg-mint/10 text-mint' : 'border-border bg-muted text-muted-foreground'
-              )}
-              role="status"
-              aria-label={isWsConnected ? 'وضعیت اتصال: متصل' : 'وضعیت اتصال: در حال اتصال'}
-            >
-              <span className={cn('h-2 w-2 rounded-full', isWsConnected ? 'bg-mint' : 'bg-muted-foreground animate-pulse')} aria-hidden="true" />
-              <span>{isWsConnected ? 'متصل' : 'در حال اتصال'}</span>
-            </div>
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {/* Settings button */}
             <button
               onClick={onOpenSettings}

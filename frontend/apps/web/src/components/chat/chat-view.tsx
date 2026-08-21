@@ -74,7 +74,7 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
             onKeyDown={handleKeyDown}
             placeholder="سوال خود را بنویسید..."
             dir="rtl"
-            className="flex-1 resize-none bg-transparent px-3 py-3 text-[15px] leading-relaxed placeholder:text-muted-foreground focus:outline-none max-h-[200px]"
+            className="flex-1 resize-none bg-transparent px-3 py-3 text-base sm:text-[15px] leading-relaxed placeholder:text-muted-foreground focus:outline-none max-h-[200px]"
           />
 
           <button

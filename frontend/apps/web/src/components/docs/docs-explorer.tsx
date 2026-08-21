@@ -67,7 +67,7 @@ const CATEGORY_MAP: Record<string, CategoryMeta> = {
   'one-click-apps': {
     id: 'one-click-apps',
     label: 'برنامه‌های آماده',
-    shortLabel: 'برنامه‌های آماده',
+    shortLabel: 'برنامه‌ها',
     description: 'وردپرس، متامیس، کملیو، گوست و سایر ابزارهای تک‌کلیکه',
     icon: LuBoxes,
     badgeClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/20 dark:text-amber-400',
@@ -83,7 +83,7 @@ const CATEGORY_MAP: Record<string, CategoryMeta> = {
   'email-server': {
     id: 'email-server',
     label: 'سرور ایمیل',
-    shortLabel: 'سرور ایمیل',
+    shortLabel: 'ایمیل',
     description: 'ارسال و دریافت ایمیل‌های سازمانی و تراکنشی با امنیت بالا',
     icon: LuMail,
     badgeClass: 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:bg-rose-500/20 dark:text-rose-400',
@@ -403,7 +403,7 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
       const params = new URLSearchParams()
       if (searchQuery) params.append('q', searchQuery)
       if (cat) params.append('category', cat)
-      params.append('limit', '100')
+      params.append('limit', '500')
 
       const res = await fetch(`/api/docs/search?${params.toString()}`)
       if (res.ok) {
@@ -467,6 +467,17 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
     })
   }, [results, selectedPlatform])
 
+  // Count to display in top badge: reflects total category/library documents when not filtering by text/platform
+  const displayDocCount = useMemo(() => {
+    if (query.trim() || selectedPlatform) {
+      return filteredResults.length
+    }
+    if (category) {
+      return categoryCounts[category] || filteredResults.length
+    }
+    return totalCount || filteredResults.length
+  }, [query, selectedPlatform, category, categoryCounts, filteredResults.length, totalCount])
+
   const handleCopyContent = () => {
     if (!selectedDoc) return
     const content = getCleanDocContent(selectedDoc)
@@ -496,7 +507,7 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground">
-                <b className="font-mono text-foreground font-bold ml-1">{filteredResults.length}</b> مستند
+                <b className="font-mono text-foreground font-bold ml-1">{displayDocCount.toLocaleString('fa-IR')}</b> مستند
               </span>
             </div>
           </div>
@@ -523,9 +534,9 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
           </div>
 
           {/* Category Filter Section */}
-          <div className="space-y-2.5 pt-0.5">
-            {/* Primary Categories (Responsive Wrap Pills) */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 select-none">
+          <div className="space-y-2 pt-0.5">
+            {/* Primary Categories: Sleek single-row scroll on mobile, wrap pills on desktop */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none sm:flex-wrap py-0.5 select-none -mx-1 px-1 sm:mx-0 sm:px-0">
               {displayedCategories.map((cat) => {
                 const isActive = category === cat.id
                 const Icon = cat.meta.icon
@@ -538,18 +549,19 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
                       setSelectedPlatform(null)
                     }}
                     className={cn(
-                      'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-150 active:scale-95 cursor-pointer',
+                      'inline-flex items-center shrink-0 gap-1 sm:gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium border transition-all duration-150 active:scale-95 cursor-pointer whitespace-nowrap',
                       isActive
-                        ? 'bg-primary text-primary-foreground border-transparent shadow-sm ring-2 ring-primary/20 font-bold'
+                        ? 'bg-primary text-primary-foreground border-transparent shadow-xs ring-1 sm:ring-2 ring-primary/20 font-bold'
                         : 'bg-card text-muted-foreground hover:text-foreground border-border hover:bg-muted hover:border-primary/30'
                     )}
                   >
-                    <Icon className={cn('w-3.5 h-3.5 shrink-0', isActive ? 'text-primary-foreground' : 'text-primary')} />
-                    <span>{cat.meta.label}</span>
+                    <Icon className={cn('w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0', isActive ? 'text-primary-foreground' : 'text-primary')} />
+                    <span className="sm:inline hidden">{cat.meta.label}</span>
+                    <span className="sm:hidden inline">{cat.meta.shortLabel || cat.meta.label}</span>
                     {cat.count > 0 && (
                       <span
                         className={cn(
-                          'font-mono text-[10px] px-1.5 py-0.5 rounded-full',
+                          'font-mono text-[9px] sm:text-[10px] px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded-full',
                           isActive
                             ? 'bg-primary-foreground/20 text-primary-foreground font-bold'
                             : 'bg-muted text-muted-foreground'
@@ -567,10 +579,10 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
                 <button
                   type="button"
                   onClick={() => setShowAllCategories(!showAllCategories)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/40 hover:bg-muted/40 transition-colors cursor-pointer"
+                  className="inline-flex items-center shrink-0 gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/40 hover:bg-muted/40 transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  <LuChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', showAllCategories && 'rotate-180')} />
-                  <span>{showAllCategories ? 'دسته‌های کمتر' : `سایر دسته‌ها (${fullCategoriesList.length - 8})`}</span>
+                  <LuChevronDown className={cn('w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-200', showAllCategories && 'rotate-180')} />
+                  <span>{showAllCategories ? 'کمتر' : `سایر (${fullCategoriesList.length - 8})`}</span>
                 </button>
               )}
 
@@ -582,10 +594,10 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
                     setCategory('')
                     setSelectedPlatform(null)
                   }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-destructive hover:bg-destructive/10 border border-destructive/20 transition-colors cursor-pointer"
+                  className="inline-flex items-center shrink-0 gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs text-destructive hover:bg-destructive/10 border border-destructive/20 transition-colors cursor-pointer whitespace-nowrap"
                   title="حذف فیلتر دسته‌بندی"
                 >
-                  <LuX className="w-3 h-3" />
+                  <LuX className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   <span>حذف فیلتر</span>
                 </button>
               )}
@@ -593,22 +605,22 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
 
             {/* Subcategory / Platform Chips (if present) */}
             {availablePlatforms.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-muted/40 border border-border/60 text-[11px] select-none">
-                <span className="text-muted-foreground flex items-center gap-1 shrink-0 text-[11px] font-semibold pl-1">
-                  <LuFilter className="w-3 h-3 text-primary" />
+              <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-muted/40 border border-border/60 text-[10px] sm:text-[11px] select-none overflow-x-auto scrollbar-none sm:flex-wrap -mx-1 px-1 sm:mx-0 sm:px-2">
+                <span className="text-muted-foreground flex items-center gap-1 shrink-0 text-[10px] sm:text-[11px] font-semibold pl-1">
+                  <LuFilter className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
                   پلتفرم‌ها:
                 </span>
                 <button
                   type="button"
                   onClick={() => setSelectedPlatform(null)}
                   className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer',
+                    'px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0',
                     selectedPlatform === null
                       ? 'bg-card text-foreground border border-border shadow-xs font-bold'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   )}
                 >
-                  همه پلتفرم‌ها
+                  همه
                 </button>
                 {availablePlatforms.map((plat) => {
                   const isSelected = selectedPlatform === plat
@@ -618,13 +630,13 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
                       type="button"
                       onClick={() => setSelectedPlatform(isSelected ? null : plat)}
                       className={cn(
-                        'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs transition-all font-medium cursor-pointer',
+                        'inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-xs transition-all font-medium cursor-pointer whitespace-nowrap shrink-0',
                         isSelected
                           ? 'bg-primary text-primary-foreground shadow-xs font-bold'
                           : 'bg-card/70 border border-border text-muted-foreground hover:text-foreground hover:bg-muted'
                       )}
                     >
-                      <LuTag className="w-2.5 h-2.5" />
+                      <LuTag className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
                       <span>{plat}</span>
                     </button>
                   )
@@ -647,7 +659,7 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
             )}
           >
             <LuList className="w-3.5 h-3.5" />
-            <span>فهرست ({filteredResults.length})</span>
+            <span>فهرست ({displayDocCount.toLocaleString('fa-IR')})</span>
           </button>
           <button
             type="button"
