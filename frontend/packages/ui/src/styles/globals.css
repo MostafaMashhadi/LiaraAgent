@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./shadcn-tailwind.css";
-@import "@fontsource-variable/vazirmatn";
+@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:is(.dark *));
 @source "../../../apps/**/*.{ts,tsx}";
@@ -395,4 +395,21 @@
   display: none !important;
   width: 0 !important;
   height: 0 !important;
+}
+
+/* Disable automatic mobile browser zooming on input focus */
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+}
+
+input,
+textarea,
+select,
+button {
+  touch-action: manipulation;
 }
