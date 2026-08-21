@@ -403,7 +403,7 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
       const params = new URLSearchParams()
       if (searchQuery) params.append('q', searchQuery)
       if (cat) params.append('category', cat)
-      params.append('limit', '100')
+      params.append('limit', '500')
 
       const res = await fetch(`/api/docs/search?${params.toString()}`)
       if (res.ok) {
@@ -467,6 +467,17 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
     })
   }, [results, selectedPlatform])
 
+  // Count to display in top badge: reflects total category/library documents when not filtering by text/platform
+  const displayDocCount = useMemo(() => {
+    if (query.trim() || selectedPlatform) {
+      return filteredResults.length
+    }
+    if (category) {
+      return categoryCounts[category] || filteredResults.length
+    }
+    return totalCount || filteredResults.length
+  }, [query, selectedPlatform, category, categoryCounts, filteredResults.length, totalCount])
+
   const handleCopyContent = () => {
     if (!selectedDoc) return
     const content = getCleanDocContent(selectedDoc)
@@ -496,7 +507,7 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground">
-                <b className="font-mono text-foreground font-bold ml-1">{filteredResults.length}</b> مستند
+                <b className="font-mono text-foreground font-bold ml-1">{displayDocCount.toLocaleString('fa-IR')}</b> مستند
               </span>
             </div>
           </div>
@@ -647,7 +658,7 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
             )}
           >
             <LuList className="w-3.5 h-3.5" />
-            <span>فهرست ({filteredResults.length})</span>
+            <span>فهرست ({displayDocCount.toLocaleString('fa-IR')})</span>
           </button>
           <button
             type="button"
