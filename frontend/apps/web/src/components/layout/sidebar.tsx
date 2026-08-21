@@ -105,7 +105,6 @@ export function Sidebar({
                 : 'opacity-0 max-w-0 pointer-events-none'
             )}
           >
-            <img src="/brand/liara-logo.svg" alt="لیارا" className="h-9 w-auto shrink-0" />
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-foreground leading-tight whitespace-nowrap">
                 دستیار هوشمند <span className="text-primary">لیارا</span>

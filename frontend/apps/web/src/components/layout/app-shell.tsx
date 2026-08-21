@@ -108,9 +108,6 @@ export function AppShell({
             </button>
 
             <img src="/brand/liara-logo.svg" alt="لیارا" className="h-8 w-auto shrink-0" />
-            <span className="font-bold text-xs sm:text-sm text-foreground truncate hidden sm:inline">
-              دستیار هوشمند لیارا
-            </span>
           </div>
 
           {/* Search Bar (Responsive: Full on Desktop, Expandable on Mobile) */}
