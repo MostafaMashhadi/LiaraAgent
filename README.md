@@ -105,13 +105,16 @@ liara-helper-agent/
 ├── cmd/
 │   ├── api/                 # HTTP server, WebSocket, and REST API entrypoint
 │   └── cli/                 # CLI tool for testing RAG locally
-├── frontend/                # React 18 + Vite + Tailwind source code
-│   ├── src/
-│   │   ├── components/      # AdminDashboard, ConfigStudio (Vim), DocsExplorer, ...
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   └── vite.config.js       # builds into ../web/dist
+├── vite-monorepo/
+│   ├── apps/
+│   │   ├── test-ui/           # Primary React 19 + Vite 8 + Tailwind 4 UI (monorepo app)
+│   │   │   ├── src/
+│   │   │   ├── package.json
+│   │   │   └── vite.config.ts # builds into ../../web/dist
+│   │   └── web/               # Obsolete UI app (removed)
+│   ├── packages/
+│   │   └── ui/                # Shared shadcn/ui component library
+│   └── pnpm-workspace.yaml
 ├── internal/
 │   ├── agent/               # Agent coordinator, session memory, tools
 │   │   └── tools/           # Config generation and log diagnosis tools
@@ -134,7 +137,7 @@ liara-helper-agent/
 ├── data/
 │   └── docs/                # Official Liara docs (cloned submodule/repo)
 ├── docker-compose.yml       # PostgreSQL + app stack
-├── Dockerfile               # Multi-stage build (frontend + Go)
+├── Dockerfile               # Multi-stage build (test-ui + Go)
 ├── liara.json               # Liara Cloud deployment config
 └── .env.example             # Sample environment variables
 ```
@@ -196,9 +199,9 @@ docker compose up --build -d
 
 #### گام اول: بیلد فرانت‌اند
 ```bash
-cd frontend
-npm install
-npm run build
+cd vite-monorepo
+pnpm install
+pnpm run build
 cd ..
 ```
 
