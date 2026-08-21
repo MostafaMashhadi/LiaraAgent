@@ -55,6 +55,7 @@ export function AppShell({ children, activeTab, setActiveTab, currentUser, onOpe
         onNewSession={onNewSession}
         currentUser={currentUser}
         onLogout={onLogout}
+        onOpenAuth={onOpenAuth}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

@@ -45,7 +45,7 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
   }
 
   const handleCopy = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text)
+    navigator.clipboard.writeText(text).catch(() => {})
     setCopiedIndex(idx)
     setTimeout(() => setCopiedIndex(null), 2000)
   }

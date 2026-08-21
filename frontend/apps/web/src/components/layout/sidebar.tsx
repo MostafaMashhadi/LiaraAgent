@@ -21,9 +21,10 @@ interface SidebarProps {
   onDeleteSession: (sessId: string) => void
   currentUser: { id: string; email: string; name: string; role: string } | null
   onLogout?: () => void
+  onOpenAuth?: () => void
 }
 
-export function Sidebar({ open, onToggle, activeTab, setActiveTab, sessions, activeSessionId, onSelectSession, onNewSession, onDeleteSession, currentUser, onLogout }: SidebarProps) {
+export function Sidebar({ open, onToggle, activeTab, setActiveTab, sessions, activeSessionId, onSelectSession, onNewSession, onDeleteSession, currentUser, onLogout, onOpenAuth }: SidebarProps) {
   const navButton = (isActive: boolean) =>
     cn(
       'w-full flex items-center gap-3 rounded-xl text-sm transition-all duration-200',
@@ -222,7 +223,7 @@ export function Sidebar({ open, onToggle, activeTab, setActiveTab, sessions, act
             )
           ) : (
             <button
-              onClick={() => setActiveTab('chat')}
+              onClick={() => onOpenAuth?.()}
               title="ورود به حساب"
               aria-label="ورود به حساب"
               className={cn(

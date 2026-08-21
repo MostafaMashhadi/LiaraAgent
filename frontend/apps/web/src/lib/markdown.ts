@@ -2,6 +2,19 @@ import { marked } from 'marked'
 
 let initialized = false
 
+function sanitizeHtml(html: string): string {
+  const div = document.createElement('div')
+  div.innerHTML = html
+  const scripts = div.querySelectorAll('script, iframe, object, embed, form, input, textarea, button')
+  scripts.forEach((el) => el.remove())
+  const eventAttrs = ['onclick', 'onerror', 'onload', 'onmouseover', 'onfocus', 'onblur', 'onsubmit']
+  const allElements = div.querySelectorAll('*')
+  allElements.forEach((el) => {
+    eventAttrs.forEach((attr) => el.removeAttribute(attr))
+  })
+  return div.innerHTML
+}
+
 export function setupMarkdownRenderer() {
   if (initialized) return
   initialized = true
@@ -49,7 +62,8 @@ export function setupMarkdownRenderer() {
 
 export function renderMarkdown(content: string): string {
   if (!initialized) setupMarkdownRenderer()
-  return marked.parse(content || '') as string
+  const raw = marked.parse(content || '') as string
+  return sanitizeHtml(raw)
 }
 
 if (typeof window !== 'undefined') {

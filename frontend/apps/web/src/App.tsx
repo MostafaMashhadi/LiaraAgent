@@ -198,14 +198,20 @@ export function App() {
 
   useEffect(() => {
     let ws: WebSocket | null = null
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+    let disposed = false
+
     const connectWS = () => {
+      if (disposed) return
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
         const wsUrl = `${protocol}//${window.location.host}/ws/chat${authToken ? '?token=' + authToken : ''}`
         ws = new WebSocket(wsUrl)
         wsRef.current = ws
 
-        ws.onopen = () => setIsWsConnected(true)
+        ws.onopen = () => {
+          if (!disposed) setIsWsConnected(true)
+        }
         ws.onmessage = (event) => {
           try {
             const data: StreamMessage = JSON.parse(event.data)
@@ -215,17 +221,20 @@ export function App() {
           }
         }
         ws.onclose = () => {
+          if (disposed) return
           setIsWsConnected(false)
-          setTimeout(connectWS, 3000)
+          reconnectTimer = setTimeout(connectWS, 3000)
         }
         ws.onerror = () => ws?.close()
       } catch {
-        setIsWsConnected(false)
+        if (!disposed) setIsWsConnected(false)
       }
     }
 
     connectWS()
     return () => {
+      disposed = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
       if (ws) ws.close()
     }
   }, [activeSessionId, authToken, handleIncomingStream])
@@ -332,11 +341,11 @@ export function App() {
       const filtered = prev.filter((s) => s.id !== sessId)
       if (filtered.length === 0) {
         const fresh: Session = { id: 'sess_' + Math.random().toString(36).substring(2, 9), title: 'گفتگوی جدید', summary: '', messages: [] }
-        setActiveSessionId(fresh.id)
+        queueMicrotask(() => setActiveSessionId(fresh.id))
         return [fresh]
       }
       if (activeSessionId === sessId) {
-        setActiveSessionId(filtered[0].id)
+        queueMicrotask(() => setActiveSessionId(filtered[0].id))
       }
       return filtered
     })
