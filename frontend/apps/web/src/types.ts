@@ -57,3 +57,11 @@ export interface Session {
   summary?: string
   messages: ChatMessage[]
 }
+
+export interface CategoryInfo {
+  id: string
+  label: string
+  count?: number
+  description?: string
+}
+

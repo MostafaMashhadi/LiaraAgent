@@ -54,7 +54,6 @@ COPY --from=builder /app/web/fallback /app/web/fallback
 ENV PORT=8080 \
     DOCS_DIR=/app/data/docs/src/pages \
     INDEX_PATH=/app/data/index.json \
-    DATABASE_URL=postgres://liara:liarapass@postgres:5432/liaradb?sslmode=disable \
     JWT_SECRET=liara-agent-jwt-super-secret-key-2026 \
     ADMIN_EMAIL=admin@liara.ir \
     ADMIN_PASSWORD=Admin@Liara2026!

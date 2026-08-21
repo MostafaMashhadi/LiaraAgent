@@ -146,7 +146,7 @@ func main() {
 	)
 
 	httpServer := &http.Server{
-		Addr:         ":" + cfg.ServerPort,
+		Addr:         "0.0.0.0:" + cfg.ServerPort,
 		Handler:      handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
@@ -158,7 +158,7 @@ func main() {
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		slog.Info("HTTP server listening", "url", "http://localhost:"+cfg.ServerPort)
+		slog.Info("HTTP server listening", "url", "http://0.0.0.0:"+cfg.ServerPort)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}
@@ -469,10 +469,61 @@ func (s *AppServer) handleChat(w http.ResponseWriter, r *http.Request) {
 		userID = &claims.UserID
 	}
 
+	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
+	defer cancel()
+
+	isStream := r.URL.Query().Get("stream") == "true" || strings.Contains(r.Header.Get("Accept"), "text/event-stream")
+
 	// Check Cache (Cost Optimization 25 pts)
 	cacheKey := cache.HashKey(req.Category + ":" + sanitizedMsg)
 	if cachedVal, found := s.QueryCache.Get(cacheKey); found {
 		cachedResp := cachedVal.(*agent.AgenticResponse)
+
+		if isStream {
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Connection", "keep-alive")
+			w.Header().Set("X-Cache", "HIT")
+
+			flusher, ok := w.(http.Flusher)
+			if ok {
+				_ = streamCachedTokens(ctx, cachedResp.Answer, req.SessionID, func(sm ws.StreamMessage) error {
+					msgBytes, _ := json.Marshal(sm)
+					_, err := fmt.Fprintf(w, "data: %s\n\n", string(msgBytes))
+					flusher.Flush()
+					return err
+				})
+
+				doneBytes, _ := json.Marshal(ws.StreamMessage{
+					Type:          "done",
+					Message:       cachedResp.Answer,
+					Sources:       cachedResp.Sources,
+					SuggestedNext: cachedResp.SuggestedNext,
+					ToolExecuted:  cachedResp.ToolExecuted,
+					DurationMs:    cachedResp.Duration.Milliseconds(),
+					SessionID:     req.SessionID,
+				})
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", string(doneBytes))
+				flusher.Flush()
+
+				if s.DB != nil {
+					go func() {
+						_ = s.DB.LogAIRequest(context.Background(), database.AIRequestLog{
+							UserID:     userID,
+							SessionID:  req.SessionID,
+							Endpoint:   "/api/chat (stream cached)",
+							Model:      s.Config.ChatModel,
+							Prompt:     sanitizedMsg,
+							Response:   cachedResp.Answer,
+							DurationMs: 5,
+							Status:     "success",
+						})
+					}()
+				}
+				return
+			}
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Cache", "HIT")
 		_ = json.NewEncoder(w).Encode(cachedResp)
@@ -493,9 +544,6 @@ func (s *AppServer) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
-	defer cancel()
 
 	// If client requested SSE streaming via query param or header
 	if r.URL.Query().Get("stream") == "true" || strings.Contains(r.Header.Get("Accept"), "text/event-stream") {
@@ -678,6 +726,12 @@ func (s *AppServer) handleWebSocketChat(w http.ResponseWriter, r *http.Request) 
 		cacheKey := cache.HashKey(clientMsg.Category + ":" + sanitizedMsg)
 		if cachedVal, found := s.QueryCache.Get(cacheKey); found {
 			cachedResp := cachedVal.(*agent.AgenticResponse)
+			cachedCtx, cachedCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			_ = streamCachedTokens(cachedCtx, cachedResp.Answer, clientMsg.SessionID, func(sm ws.StreamMessage) error {
+				return conn.WriteJSON(sm)
+			})
+			cachedCancel()
+
 			_ = conn.WriteJSON(ws.StreamMessage{
 				Type:          "done",
 				Message:       cachedResp.Answer,
@@ -955,7 +1009,12 @@ func (s *AppServer) handleDocsSearch(w http.ResponseWriter, r *http.Request) {
 
 	topK := 25
 	if q == "" {
-		topK = 50
+		topK = 200
+	}
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if val, err := strconv.Atoi(limitStr); err == nil && val > 0 {
+			topK = val
+		}
 	}
 
 	results, err := s.Store.Search(r.Context(), nil, store.FilterOptions{
@@ -1109,3 +1168,37 @@ func (s *AppServer) handleChatMessages(w http.ResponseWriter, r *http.Request) {
 		"messages":   msgs,
 	})
 }
+
+func streamCachedTokens(ctx context.Context, text string, sessionID string, sendToken func(ws.StreamMessage) error) error {
+	var current strings.Builder
+	for _, r := range text {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		current.WriteRune(r)
+		if r == ' ' || r == '\n' || r == '\t' || r == '،' || r == '.' || current.Len() >= 12 {
+			if err := sendToken(ws.StreamMessage{
+				Type:      "token",
+				Token:     current.String(),
+				SessionID: sessionID,
+			}); err != nil {
+				return err
+			}
+			current.Reset()
+			time.Sleep(8 * time.Millisecond)
+		}
+	}
+
+	if current.Len() > 0 {
+		return sendToken(ws.StreamMessage{
+			Type:      "token",
+			Token:     current.String(),
+			SessionID: sessionID,
+		})
+	}
+	return nil
+}
+

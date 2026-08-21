@@ -40,13 +40,13 @@ const switchThumbVariants = cva(
   }
 )
 
-function Switch({ className, variant, size, ...props }: React.ComponentProps<"button"> & VariantProps<typeof switchVariants>) {
+function Switch({ className, variant, size, checked, ...props }: React.ComponentProps<"button"> & VariantProps<typeof switchVariants> & { checked?: boolean }) {
   return (
     <button
       type="button"
       role="switch"
       data-slot="switch"
-      data-state={props.checked ? "checked" : "unchecked"}
+      data-state={checked ? "checked" : "unchecked"}
       className={cn(switchVariants({ variant, size, className }))}
       {...props}
     >

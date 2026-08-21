@@ -99,9 +99,7 @@ func (a *Agent) ProcessMessageStream(ctx context.Context, sessionID, userMessage
 		greetingAnswer := "سلام و درود! من دستیار هوشمند و متخصص فنی پلتفرم ابری **لیارا** هستم.\n\n" +
 			"چطور می‌توانم در زمینه استقرار برنامه‌ها، دیتابیس‌ها، تنظیم فایل‌های کانفیگ (`liara.json` یا `Dockerfile`) و رفع خطاهای دیپلوی کمکتان کنم؟"
 
-		if onToken != nil {
-			_ = onToken(greetingAnswer)
-		}
+		streamChunkedText(ctx, greetingAnswer, onToken)
 
 		resp := &AgenticResponse{
 			Answer: greetingAnswer,
@@ -120,9 +118,7 @@ func (a *Agent) ProcessMessageStream(ctx context.Context, sessionID, userMessage
 	// 2. Thanks / Farewell Intent Detection
 	if isThanksOrFarewell(trimmed) {
 		farewellAnswer := "خواهش می‌کنم! خوشحالم که توانستم کمکتان کنم. هر زمان سوال دیگری درباره لیارا یا خطاهای دیپلوی داشتید در خدمتم."
-		if onToken != nil {
-			_ = onToken(farewellAnswer)
-		}
+		streamChunkedText(ctx, farewellAnswer, onToken)
 
 		resp := &AgenticResponse{
 			Answer:   farewellAnswer,
@@ -137,9 +133,7 @@ func (a *Agent) ProcessMessageStream(ctx context.Context, sessionID, userMessage
 		logTool := a.Tools["analyze_error_log"]
 		result, err := logTool.Execute(ctx, trimmed)
 		if err == nil && result.Success {
-			if onToken != nil {
-				_ = onToken(result.Data)
-			}
+			streamChunkedText(ctx, result.Data, onToken)
 
 			resp := &AgenticResponse{
 				Answer:       result.Data,
@@ -161,9 +155,7 @@ func (a *Agent) ProcessMessageStream(ctx context.Context, sessionID, userMessage
 		configTool := a.Tools["generate_liara_config"]
 		result, err := configTool.Execute(ctx, fmt.Sprintf(`{"platform": "%s"}`, platform))
 		if err == nil && result.Success {
-			if onToken != nil {
-				_ = onToken(result.Data)
-			}
+			streamChunkedText(ctx, result.Data, onToken)
 
 			resp := &AgenticResponse{
 				Answer:       result.Data,
@@ -420,3 +412,33 @@ func generateNextSteps(question, answer string) []string {
 	steps = append(steps, "تولید خودکار فایل کانفیگ liara.json")
 	return steps
 }
+
+// streamChunkedText streams static/cached text in small natural chunks to provide a smooth UI experience
+func streamChunkedText(ctx context.Context, text string, onToken func(string) error) {
+	if onToken == nil || text == "" {
+		return
+	}
+
+	var current strings.Builder
+	for _, r := range text {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		current.WriteRune(r)
+		if r == ' ' || r == '\n' || r == '\t' || r == '،' || r == '.' || current.Len() >= 12 {
+			if err := onToken(current.String()); err != nil {
+				return
+			}
+			current.Reset()
+			time.Sleep(8 * time.Millisecond)
+		}
+	}
+
+	if current.Len() > 0 {
+		_ = onToken(current.String())
+	}
+}
+

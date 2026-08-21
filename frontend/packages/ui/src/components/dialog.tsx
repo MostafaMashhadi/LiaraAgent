@@ -10,6 +10,7 @@ const dialogVariants = cva(
         default: "",
         sm: "items-start p-4",
         lg: "items-center p-8",
+        full: "items-center p-4",
       },
     },
     defaultVariants: {

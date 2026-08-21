@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { AppShell } from '@/components/layout/app-shell'
 import { AuthModal } from '@/components/auth/auth-modal'
+import { SettingsModal } from '@/components/settings-modal'
 import { ChatView } from '@/components/chat/chat-view'
 import { ConfigStudio } from '@/components/config/config-studio'
 import { LogDebugger } from '@/components/logs/log-debugger'
@@ -21,6 +22,7 @@ export function App() {
   })
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('liara_auth_token') || '')
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
 
   const [sessions, setSessions] = useState<Session[]>(() => {
     try {
@@ -52,18 +54,37 @@ export function App() {
       const res = await fetch('/api/chat/sessions', { headers })
       if (res.ok) {
         const data = await res.json()
-        if (data.sessions && data.sessions.length > 0) {
+        if (data.sessions && Array.isArray(data.sessions) && data.sessions.length > 0) {
           setSessions((prev) => {
-            const merged = data.sessions.map((dbSess: { id: string; title: string; summary?: string }) => {
-              const existing = prev.find((p) => p.id === dbSess.id)
-              return {
-                id: dbSess.id,
-                title: dbSess.title,
-                summary: dbSess.summary,
-                messages: existing ? existing.messages : [],
+            const dbMap = new Map<string, { id: string; title: string; summary?: string }>(
+              data.sessions.map((s: { id: string; title: string; summary?: string }) => [s.id, s])
+            )
+            // Keep all local sessions and update titles/summaries if present in DB
+            const updated = prev.map((local) => {
+              const dbItem = dbMap.get(local.id)
+              if (dbItem) {
+                dbMap.delete(local.id)
+                return {
+                  ...local,
+                  title:
+                    local.title && local.title !== 'گفتگوی جاری' && local.title !== 'گفتگوی جدید'
+                      ? local.title
+                      : dbItem.title || local.title,
+                  summary: dbItem.summary || local.summary,
+                }
               }
+              return local
             })
-            return merged
+            // Append any remote sessions not already present locally
+            for (const [, dbItem] of dbMap) {
+              updated.push({
+                id: dbItem.id,
+                title: dbItem.title || 'گفتگو',
+                summary: dbItem.summary || '',
+                messages: [],
+              })
+            }
+            return updated
           })
         }
       }
@@ -72,23 +93,43 @@ export function App() {
     }
   }, [authToken])
 
+  const fetchedSessionsRef = useRef<Set<string>>(new Set())
+
   const fetchSessionMessages = useCallback(async (sessId: string) => {
+    if (!sessId || fetchedSessionsRef.current.has(sessId)) return
+    fetchedSessionsRef.current.add(sessId)
+
     try {
       const headers: Record<string, string> = {}
       if (authToken) headers['Authorization'] = `Bearer ${authToken}`
       const res = await fetch(`/api/chat/messages?session_id=${sessId}`, { headers })
       if (res.ok) {
         const data = await res.json()
-        if (data.messages) {
-          const parsed: ChatMessage[] = data.messages.map((m: { role: string; content: string; sources?: unknown; suggested_next?: string[]; duration_ms?: number }) => ({
-            role: m.role,
-            content: m.content,
-            sources: m.sources,
-            suggested_next: m.suggested_next,
-            duration_ms: m.duration_ms,
-          }))
+        if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+          const parsed: ChatMessage[] = data.messages.map(
+            (m: {
+              role: string
+              content: string
+              sources?: unknown
+              suggested_next?: string[]
+              duration_ms?: number
+            }) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+              sources: m.sources as DocResult['sources'],
+              suggested_next: m.suggested_next,
+              duration_ms: m.duration_ms,
+            })
+          )
           setSessions((prev) =>
-            prev.map((s) => (s.id === sessId ? { ...s, messages: parsed } : s))
+            prev.map((s) => {
+              if (s.id === sessId) {
+                // If local session already has more recent messages, keep local
+                if (s.messages.length >= parsed.length) return s
+                return { ...s, messages: parsed }
+              }
+              return s
+            })
           )
         }
       }
@@ -108,7 +149,7 @@ export function App() {
         fetchSessionMessages(activeSessionId)
       }
     }
-  }, [activeSessionId, sessions, fetchSessionMessages])
+  }, [activeSessionId, fetchSessionMessages])
 
   const handleLoginSuccess = (token: string, user: LiaraUser) => {
     setAuthToken(token)
@@ -146,63 +187,85 @@ export function App() {
   const currentSession = sessions.find((s) => s.id === activeSessionId) || sessions[0]
   const messages = currentSession ? currentSession.messages : []
 
-  const updateSessionMessages = useCallback((updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
-    setSessions((prevSessions) =>
-      prevSessions.map((s) => {
-        if (s.id === activeSessionId) {
-          const newMessages = typeof updater === 'function' ? updater(s.messages) : updater
-          let newTitle = s.title
-          if (s.title === 'گفتگوی جاری' || s.title === 'گفتگوی جدید') {
-            const firstUser = newMessages.find((m) => m.role === 'user')
-            if (firstUser) {
-              newTitle = firstUser.content.slice(0, 30) + (firstUser.content.length > 30 ? '...' : '')
+  const updateSessionMessages = useCallback(
+    (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+      setSessions((prevSessions) => {
+        let found = false
+        const updated = prevSessions.map((s) => {
+          if (s.id === activeSessionId) {
+            found = true
+            const newMessages = typeof updater === 'function' ? updater(s.messages) : updater
+            let newTitle = s.title
+            if (s.title === 'گفتگوی جاری' || s.title === 'گفتگوی جدید') {
+              const firstUser = newMessages.find((m) => m.role === 'user')
+              if (firstUser) {
+                newTitle = firstUser.content.slice(0, 30) + (firstUser.content.length > 30 ? '...' : '')
+              }
             }
+            return { ...s, messages: newMessages, title: newTitle }
           }
-          return { ...s, messages: newMessages, title: newTitle }
-        }
-        return s
-      })
-    )
-  }, [activeSessionId])
+          return s
+        })
 
-  const handleIncomingStream = useCallback((data: StreamMessage) => {
-    if (data.type === 'token') {
-      setIsStreaming(true)
-      setStreamingBuffer((prev) => prev + (data.token || ''))
-    } else if (data.type === 'done') {
-      setIsStreaming(false)
-      setStreamingBuffer('')
-      updateSessionMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.message || '',
-          sources: data.sources,
-          suggested_next: data.suggested_next,
-          duration_ms: data.duration_ms,
-        },
-      ])
-      fetchDBSessions()
-    } else if (data.type === 'error') {
-      setIsStreaming(false)
-      setStreamingBuffer('')
-      updateSessionMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `**خطا:** ${data.error || 'خطای پردازش درخواست'}`,
-        },
-      ])
-    }
-  }, [updateSessionMessages, fetchDBSessions])
+        if (!found) {
+          const newMessages = typeof updater === 'function' ? updater([]) : updater
+          let newTitle = 'گفتگوی جاری'
+          const firstUser = newMessages.find((m) => m.role === 'user')
+          if (firstUser) {
+            newTitle = firstUser.content.slice(0, 30) + (firstUser.content.length > 30 ? '...' : '')
+          }
+          return [{ id: activeSessionId, title: newTitle, summary: '', messages: newMessages }, ...prevSessions]
+        }
+        return updated
+      })
+    },
+    [activeSessionId]
+  )
+
+  const handleIncomingStreamRef = useRef<(data: StreamMessage) => void>(() => {})
+
+  const handleIncomingStream = useCallback(
+    (data: StreamMessage) => {
+      if (data.type === 'token') {
+        setIsStreaming(true)
+        setStreamingBuffer((prev) => prev + (data.token || ''))
+      } else if (data.type === 'done') {
+        setIsStreaming(false)
+        setStreamingBuffer('')
+        updateSessionMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: data.message || '',
+            sources: data.sources,
+            suggested_next: data.suggested_next,
+            duration_ms: data.duration_ms,
+          },
+        ])
+      } else if (data.type === 'error') {
+        setIsStreaming(false)
+        setStreamingBuffer('')
+        updateSessionMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `**خطا:** ${data.error || 'خطای پردازش درخواست'}`,
+          },
+        ])
+      }
+    },
+    [updateSessionMessages]
+  )
+
+  handleIncomingStreamRef.current = handleIncomingStream
 
   useEffect(() => {
     let ws: WebSocket | null = null
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-    let disposed = false
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+    let isCleanedUp = false
 
     const connectWS = () => {
-      if (disposed) return
+      if (isCleanedUp) return
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
         const wsUrl = `${protocol}//${window.location.host}/ws/chat${authToken ? '?token=' + authToken : ''}`
@@ -210,34 +273,35 @@ export function App() {
         wsRef.current = ws
 
         ws.onopen = () => {
-          if (!disposed) setIsWsConnected(true)
+          if (!isCleanedUp) setIsWsConnected(true)
         }
         ws.onmessage = (event) => {
           try {
             const data: StreamMessage = JSON.parse(event.data)
-            handleIncomingStream(data)
+            handleIncomingStreamRef.current(data)
           } catch {
             // ignore parse errors
           }
         }
         ws.onclose = () => {
-          if (disposed) return
-          setIsWsConnected(false)
-          reconnectTimer = setTimeout(connectWS, 3000)
+          if (!isCleanedUp) {
+            setIsWsConnected(false)
+            reconnectTimeout = setTimeout(connectWS, 3000)
+          }
         }
         ws.onerror = () => ws?.close()
       } catch {
-        if (!disposed) setIsWsConnected(false)
+        if (!isCleanedUp) setIsWsConnected(false)
       }
     }
 
     connectWS()
     return () => {
-      disposed = true
-      if (reconnectTimer) clearTimeout(reconnectTimer)
+      isCleanedUp = true
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
       if (ws) ws.close()
     }
-  }, [activeSessionId, authToken, handleIncomingStream])
+  }, [authToken])
 
   const handleSendMessage = async (text: string) => {
     if (!text || isStreaming) return
@@ -257,7 +321,7 @@ export function App() {
       try {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-          Accept: 'text/event-stream',
+          Accept: 'text/event-stream, application/json',
         }
         if (authToken) headers['Authorization'] = `Bearer ${authToken}`
 
@@ -273,6 +337,20 @@ export function App() {
         if (!res.ok) {
           const raw = await res.text()
           throw new Error(raw || 'خطای ارتباط با سرور')
+        }
+
+        const contentType = res.headers.get('content-type') || ''
+        if (contentType.includes('application/json')) {
+          const data = await res.json()
+          handleIncomingStream({
+            type: 'done',
+            message: data.answer || data.message || '',
+            sources: data.sources,
+            suggested_next: data.suggested_next,
+            duration_ms: data.duration_ms,
+            session_id: activeSessionId,
+          })
+          return
         }
 
         const reader = res.body?.getReader()
@@ -299,6 +377,16 @@ export function App() {
             } catch {
               // ignore parse errors
             }
+          }
+        }
+
+        if (partial.trim() && partial.trim().startsWith('data:')) {
+          try {
+            const jsonStr = partial.trim().replace(/^data:\s*/, '')
+            const data: StreamMessage = JSON.parse(jsonStr)
+            handleIncomingStream(data)
+          } catch {
+            // ignore parse errors
           }
         }
       } catch (err) {
@@ -341,11 +429,11 @@ export function App() {
       const filtered = prev.filter((s) => s.id !== sessId)
       if (filtered.length === 0) {
         const fresh: Session = { id: 'sess_' + Math.random().toString(36).substring(2, 9), title: 'گفتگوی جدید', summary: '', messages: [] }
-        queueMicrotask(() => setActiveSessionId(fresh.id))
+        setActiveSessionId(fresh.id)
         return [fresh]
       }
       if (activeSessionId === sessId) {
-        queueMicrotask(() => setActiveSessionId(filtered[0].id))
+        setActiveSessionId(filtered[0].id)
       }
       return filtered
     })
@@ -356,6 +444,24 @@ export function App() {
     setStreamingBuffer('')
     setIsStreaming(false)
   }, [updateSessionMessages])
+
+  const handleClearAllSessions = useCallback(() => {
+    const fresh: Session = {
+      id: 'sess_' + Math.random().toString(36).substring(2, 9),
+      title: 'گفتگوی جاری',
+      summary: '',
+      messages: [],
+    }
+    setSessions([fresh])
+    setActiveSessionId(fresh.id)
+    setStreamingBuffer('')
+    setIsStreaming(false)
+    try {
+      localStorage.setItem('liara_sessions', JSON.stringify([fresh]))
+    } catch {
+      // ignore
+    }
+  }, [])
 
   const [focusDoc, setFocusDoc] = useState<DocResult | null>(null)
 
@@ -371,6 +477,7 @@ export function App() {
       currentUser={currentUser}
       onOpenAuth={() => setShowAuthModal(true)}
       onLogout={handleLogout}
+      onOpenSettings={() => setShowSettingsModal(true)}
       isWsConnected={isWsConnected}
       onSelectDoc={handleSelectDoc}
       onDeleteSession={handleDeleteSession}
@@ -403,6 +510,20 @@ export function App() {
         <AuthModal
           onClose={() => setShowAuthModal(false)}
           onSuccess={handleLoginSuccess}
+        />
+      )}
+
+      {showSettingsModal && (
+        <SettingsModal
+          open={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          currentUser={currentUser}
+          onOpenAuth={() => {
+            setShowSettingsModal(false)
+            setShowAuthModal(true)
+          }}
+          onLogout={handleLogout}
+          onClearAllSessions={handleClearAllSessions}
         />
       )}
     </AppShell>
