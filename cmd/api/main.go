@@ -146,7 +146,7 @@ func main() {
 	)
 
 	httpServer := &http.Server{
-		Addr:         ":" + cfg.ServerPort,
+		Addr:         "0.0.0.0:" + cfg.ServerPort,
 		Handler:      handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
@@ -158,7 +158,7 @@ func main() {
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		slog.Info("HTTP server listening", "url", "http://localhost:"+cfg.ServerPort)
+		slog.Info("HTTP server listening", "url", "http://0.0.0.0:"+cfg.ServerPort)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}
