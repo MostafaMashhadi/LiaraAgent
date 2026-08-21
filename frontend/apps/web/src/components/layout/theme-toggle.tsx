@@ -45,7 +45,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         aria-label="تغییر تم"
         title="تغییر تم"
         className={cn(
-          'h-8 w-8 rounded-full border border-border bg-background hover:bg-muted flex items-center justify-center transition-colors',
+          'h-10 w-10 md:h-8 md:w-8 rounded-full border border-border bg-background hover:bg-muted flex items-center justify-center transition-colors',
           open ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'
         )}
       >
@@ -68,7 +68,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
                 setOpen(false)
               }}
               className={cn(
-                'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-colors',
+                'min-h-11 w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-colors',
                 theme === opt.value
                   ? 'bg-primary/10 text-primary font-medium'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'

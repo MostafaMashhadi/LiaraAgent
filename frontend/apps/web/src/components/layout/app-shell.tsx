@@ -79,7 +79,7 @@ export function AppShell({
   ]
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-background">
       <Sidebar
         open={sidebarOpen}
         onToggle={toggleSidebar}
@@ -96,47 +96,42 @@ export function AppShell({
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top Header */}
-        <header className="h-14 shrink-0 sticky top-0 z-30 flex items-center justify-between gap-2 px-3 sm:px-4 md:px-6 border-b border-border bg-background/90 backdrop-blur-xl">
+        <header className="h-16 shrink-0 sticky top-0 z-30 flex items-center justify-between gap-4 px-4 sm:px-6 md:px-8 border-b border-border bg-background/90 backdrop-blur-xl">
           <div className="flex items-center gap-2 min-w-0">
             {/* Mobile Hamburger Drawer Toggle */}
             <button
               onClick={toggleSidebar}
               aria-label="منوی دستیار"
-              className="lg:hidden h-8 w-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              className="lg:hidden h-11 w-11 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
             >
               <LuMenu className="w-5 h-5" />
             </button>
 
-            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-sm">
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
-            </div>
-            <span className="font-bold text-xs sm:text-sm text-foreground truncate hidden sm:inline">
-              دستیار هوشمند لیارا
-            </span>
+            <img src="/brand/liara-logo.svg" alt="لیارا" className="h-8 w-auto shrink-0" />
           </div>
 
           {/* Search Bar (Responsive: Full on Desktop, Expandable on Mobile) */}
           <HeaderSearch onSelectDoc={onSelectDoc} />
 
           {/* Top Left (RTL end) Action Icons & User Info */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            <div
+              className={cn(
+                'hidden sm:inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium',
+                isWsConnected ? 'border-mint/30 bg-mint/10 text-mint' : 'border-border bg-muted text-muted-foreground'
+              )}
+              role="status"
+              aria-label={isWsConnected ? 'وضعیت اتصال: متصل' : 'وضعیت اتصال: در حال اتصال'}
+            >
+              <span className={cn('h-2 w-2 rounded-full', isWsConnected ? 'bg-mint' : 'bg-muted-foreground animate-pulse')} aria-hidden="true" />
+              <span>{isWsConnected ? 'متصل' : 'در حال اتصال'}</span>
+            </div>
             {/* Settings button */}
             <button
               onClick={onOpenSettings}
               aria-label="تنظیمات دستیار"
               title="تنظیمات دستیار"
-              className="h-8 w-8 rounded-full border border-border bg-background hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              className="h-10 w-10 md:h-8 md:w-8 rounded-full border border-border bg-background hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
             >
               <LuSettings className="w-4 h-4" />
             </button>
@@ -186,4 +181,3 @@ export function AppShell({
     </div>
   )
 }
-

@@ -52,7 +52,7 @@ export function StatsDashboard() {
 
         {/* Metric Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card p-4 space-y-2 rounded-xl border border-border elevation-1">
+          <div className="interactive-card bg-card p-4 space-y-2 rounded-xl border border-border elevation-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-semibold">بخش‌های برداری داکیومنت</span>
               <LuDatabase className="w-4 h-4 text-muted-foreground" />
@@ -63,7 +63,7 @@ export function StatsDashboard() {
             <p className="text-[11px] text-muted-foreground">ایندکس فعال در پایگاه حافظه برداری</p>
           </div>
 
-          <div className="bg-card p-4 space-y-2 rounded-xl border border-mint/30 elevation-1">
+          <div className="interactive-card bg-card p-4 space-y-2 rounded-xl border border-mint/30 elevation-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-semibold">توکن‌های ذخیره‌شده</span>
               <LuCoins className="w-4 h-4 text-mint" />
@@ -74,7 +74,7 @@ export function StatsDashboard() {
             <p className="text-[11px] text-muted-foreground">کاهش مستقیم هزینه API و تاخیر</p>
           </div>
 
-          <div className="bg-card p-4 space-y-2 rounded-xl border border-border elevation-1">
+          <div className="interactive-card bg-card p-4 space-y-2 rounded-xl border border-border elevation-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-semibold">نرخ اصابت کش (Hit Rate)</span>
               <LuZap className="w-4 h-4 text-gold" />
@@ -87,7 +87,7 @@ export function StatsDashboard() {
             </p>
           </div>
 
-          <div className="bg-card p-4 space-y-2 rounded-xl border border-border elevation-1">
+          <div className="interactive-card bg-card p-4 space-y-2 rounded-xl border border-border elevation-1">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-semibold">آپ‌تایم سرور</span>
               <LuClock className="w-4 h-4 text-muted-foreground" />

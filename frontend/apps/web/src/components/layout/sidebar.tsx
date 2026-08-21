@@ -105,23 +105,9 @@ export function Sidebar({
                 : 'opacity-0 max-w-0 pointer-events-none'
             )}
           >
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-sm">
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
-            </div>
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-foreground leading-tight whitespace-nowrap">
-                لیارا <span className="text-primary">دستیار هوشمند</span>
+                دستیار هوشمند <span className="text-primary">لیارا</span>
               </h1>
               <p className="text-[10px] text-muted-foreground font-mono truncate">Platform AI Agent</p>
             </div>
@@ -133,16 +119,16 @@ export function Sidebar({
             aria-label={isMobile ? 'بستن منو' : isExpanded ? 'بستن نوار کناری' : 'باز کردن نوار کناری'}
             title={isMobile ? 'بستن منو' : isExpanded ? 'بستن نوار کناری' : 'باز کردن نوار کناری'}
             className={cn(
-              'h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0',
+              'h-11 w-11 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0',
               !isExpanded && 'mx-auto'
             )}
           >
             {isMobile ? (
-              <LuX className="w-4 h-4" />
+              <LuX className="w-5 h-5" />
             ) : isExpanded ? (
-              <LuPanelRightClose className="w-4 h-4" />
+              <LuPanelRightClose className="w-5 h-5" />
             ) : (
-              <LuPanelRightOpen className="w-4 h-4" />
+              <LuPanelRightOpen className="w-5 h-5" />
             )}
           </button>
         </div>
@@ -373,8 +359,8 @@ export function Sidebar({
       {/* Mobile Drawer (Slide-out from Right in RTL) */}
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-50 w-[280px] bg-card border-l border-border elevation-4 lg:hidden transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-          open ? 'translate-x-0 shadow-2xl' : 'translate-x-full pointer-events-none'
+          'mobile-sidebar fixed inset-y-0 right-0 z-50 w-[min(280px,calc(100vw-1rem))] bg-card border-l border-border elevation-4 lg:hidden transition-transform duration-[340ms] ease-[cubic-bezier(0.16,1,0.3,1)]',
+          open ? 'translate-x-0 shadow-2xl animate-mobile-sidebar-in' : 'translate-x-full pointer-events-none'
         )}
       >
         {renderSidebarContent(true)}

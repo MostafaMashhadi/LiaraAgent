@@ -439,12 +439,6 @@ export function App() {
     })
   }, [authToken, activeSessionId])
 
-  const handleClearCurrentSession = useCallback(() => {
-    updateSessionMessages([])
-    setStreamingBuffer('')
-    setIsStreaming(false)
-  }, [updateSessionMessages])
-
   const handleClearAllSessions = useCallback(() => {
     const fresh: Session = {
       id: 'sess_' + Math.random().toString(36).substring(2, 9),
@@ -492,7 +486,6 @@ export function App() {
           onSendMessage={handleSendMessage}
           streamingBuffer={streamingBuffer}
           isStreaming={isStreaming}
-          onClearSession={handleClearCurrentSession}
         />
       )}
 

@@ -15,12 +15,8 @@ interface Window {
     highlightAuto: (code: string) => { value: string }
   } | undefined
   copyCodeBlock: (id: string) => void
-  SpeechRecognition: typeof SpeechRecognition | undefined
-  webkitSpeechRecognition: typeof SpeechRecognition | undefined
-}
-
-interface SpeechRecognition {
-  new (): SpeechRecognitionInstance
+  SpeechRecognition: { new(): SpeechRecognitionInstance } | undefined
+  webkitSpeechRecognition: { new(): SpeechRecognitionInstance } | undefined
 }
 
 interface SpeechRecognitionInstance {

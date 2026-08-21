@@ -42,7 +42,8 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
       LLM_CHAT_MODEL: ${LLM_CHAT_MODEL:-gpt-4o-mini}
       LLM_EMBEDDING_MODEL: ${LLM_EMBEDDING_MODEL:-text-embedding-3-small}
-      DOCS_DIR: /app/data/docs/src/pages
+      REPO_DIR: /app/docs
+      DOCS_DIR: /app/docs/src/pages
       INDEX_PATH: /app/data/index.json
     volumes:
       - agent_data:/app/data

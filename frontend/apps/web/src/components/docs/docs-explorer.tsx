@@ -725,7 +725,7 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
                       setMobileView('reader')
                     }}
                     className={cn(
-                      'p-3.5 rounded-xl border text-right cursor-pointer transition-all duration-200 elevation-1 hover:elevation-2 relative group',
+                      'interactive-card p-3.5 rounded-xl border text-right cursor-pointer transition-all duration-200 elevation-1 hover:elevation-2 relative group',
                       isSelected
                         ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary/30'
                         : 'bg-card border-border hover:border-primary/40 text-foreground'
@@ -882,4 +882,3 @@ export function DocsExplorer({ focusDoc }: DocsExplorerProps) {
     </div>
   )
 }
-

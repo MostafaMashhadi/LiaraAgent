@@ -80,7 +80,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 
 function ChartCard({ title, subtitle, children, isEmpty }: { title: string; subtitle?: string; children: React.ReactNode; isEmpty?: boolean }) {
   return (
-    <div className="bg-card rounded-2xl border border-border elevation-1 p-4 md:p-5 flex flex-col">
+    <div className="interactive-card bg-card rounded-2xl border border-border elevation-1 p-4 md:p-5 flex flex-col">
       <div className="mb-4">
         <h3 className="text-sm font-bold text-foreground">{title}</h3>
         {subtitle && <p className="text-[11px] text-muted-foreground mt-0.5">{subtitle}</p>}
@@ -101,7 +101,7 @@ function ChartCard({ title, subtitle, children, isEmpty }: { title: string; subt
 
 function KpiCard({ icon, label, value, sub, accent }: { icon: React.ReactNode; label: string; value: string; sub?: string; accent: string }) {
   return (
-    <div className="bg-card p-4 space-y-1.5 rounded-2xl border border-border elevation-1">
+    <div className="interactive-card bg-card p-4 space-y-1.5 rounded-2xl border border-border elevation-1">
       <div className="flex items-center justify-between text-muted-foreground">
         <span className="text-xs font-semibold">{label}</span>
         <span className={accent}>{icon}</span>
