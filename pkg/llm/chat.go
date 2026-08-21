@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // ChatMessage represents a single message in a conversation.
@@ -97,13 +98,36 @@ func (c *Client) CreateChatCompletionStream(ctx context.Context, messages []Chat
 		res, err = c.chatOpenAIStream(ctx, messages, temperature, onToken)
 	}
 
-	// Fallback to non-streaming completion if streaming returns an error
+	// Fallback to non-streaming completion if streaming returns an error or empty string
 	if err != nil || res == "" {
 		fallbackRes, fallbackErr := c.CreateChatCompletion(ctx, messages, temperature)
 		if fallbackErr != nil {
-			return "", err
+			if err != nil {
+				return "", err
+			}
+			return "", fallbackErr
 		}
-		_ = onToken(fallbackRes)
+
+		// Stream fallback response smoothly chunk by chunk
+		var current strings.Builder
+		for _, r := range fallbackRes {
+			select {
+			case <-ctx.Done():
+				return fallbackRes, ctx.Err()
+			default:
+			}
+			current.WriteRune(r)
+			if r == ' ' || r == '\n' || r == '\t' || r == '،' || r == '.' || current.Len() >= 12 {
+				if streamErr := onToken(current.String()); streamErr != nil {
+					return fallbackRes, streamErr
+				}
+				current.Reset()
+				time.Sleep(8 * time.Millisecond)
+			}
+		}
+		if current.Len() > 0 {
+			_ = onToken(current.String())
+		}
 		return fallbackRes, nil
 	}
 
@@ -149,6 +173,8 @@ func (c *Client) chatOpenAIStream(ctx context.Context, messages []ChatMessage, t
 
 	var fullText strings.Builder
 	scanner := bufio.NewScanner(resp.Body)
+	scanBuf := make([]byte, 64*1024)
+	scanner.Buffer(scanBuf, 2*1024*1024)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -189,19 +215,18 @@ func (c *Client) chatOpenAIStream(ctx context.Context, messages []ChatMessage, t
 	return fullText.String(), nil
 }
 
-func (c *Client) chatGeminiNativeStream(ctx context.Context, messages []ChatMessage, temperature float32, onToken func(string) error) (string, error) {
-	modelName := c.ChatModel
-	if !strings.HasPrefix(modelName, "models/") {
-		modelName = "models/" + modelName
-	}
-
+func formatGeminiContents(messages []ChatMessage) ([]geminiChatContent, *geminiChatContent) {
 	var contents []geminiChatContent
 	var systemInstruction *geminiChatContent
 
 	for _, msg := range messages {
 		if msg.Role == "system" {
-			systemInstruction = &geminiChatContent{
-				Parts: []geminiPart{{Text: msg.Content}},
+			if systemInstruction == nil {
+				systemInstruction = &geminiChatContent{
+					Parts: []geminiPart{{Text: msg.Content}},
+				}
+			} else if len(systemInstruction.Parts) > 0 {
+				systemInstruction.Parts[0].Text += "\n" + msg.Content
 			}
 			continue
 		}
@@ -211,11 +236,37 @@ func (c *Client) chatGeminiNativeStream(ctx context.Context, messages []ChatMess
 			role = "model"
 		}
 
-		contents = append(contents, geminiChatContent{
-			Role:  role,
-			Parts: []geminiPart{{Text: msg.Content}},
-		})
+		// Ensure strictly alternating roles for Gemini
+		if len(contents) > 0 && contents[len(contents)-1].Role == role {
+			if len(contents[len(contents)-1].Parts) > 0 {
+				contents[len(contents)-1].Parts[0].Text += "\n\n" + msg.Content
+			}
+		} else {
+			contents = append(contents, geminiChatContent{
+				Role:  role,
+				Parts: []geminiPart{{Text: msg.Content}},
+			})
+		}
 	}
+
+	// First conversation turn must be from 'user'
+	if len(contents) > 0 && contents[0].Role != "user" {
+		contents = append([]geminiChatContent{{
+			Role:  "user",
+			Parts: []geminiPart{{Text: "سلام"}},
+		}}, contents...)
+	}
+
+	return contents, systemInstruction
+}
+
+func (c *Client) chatGeminiNativeStream(ctx context.Context, messages []ChatMessage, temperature float32, onToken func(string) error) (string, error) {
+	modelName := c.ChatModel
+	if !strings.HasPrefix(modelName, "models/") {
+		modelName = "models/" + modelName
+	}
+
+	contents, systemInstruction := formatGeminiContents(messages)
 
 	reqBody := geminiGenerateRequest{
 		Contents:          contents,
@@ -252,6 +303,8 @@ func (c *Client) chatGeminiNativeStream(ctx context.Context, messages []ChatMess
 
 	var fullText strings.Builder
 	scanner := bufio.NewScanner(resp.Body)
+	scanBuf := make([]byte, 64*1024)
+	scanner.Buffer(scanBuf, 2*1024*1024)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -265,6 +318,10 @@ func (c *Client) chatGeminiNativeStream(ctx context.Context, messages []ChatMess
 			continue
 		}
 
+		if geminiResp.Error != nil {
+			return fullText.String(), fmt.Errorf("Gemini stream API error: %s", geminiResp.Error.Message)
+		}
+
 		if len(geminiResp.Candidates) > 0 && len(geminiResp.Candidates[0].Content.Parts) > 0 {
 			token := geminiResp.Candidates[0].Content.Parts[0].Text
 			fullText.WriteString(token)
@@ -272,6 +329,10 @@ func (c *Client) chatGeminiNativeStream(ctx context.Context, messages []ChatMess
 				return fullText.String(), err
 			}
 		}
+	}
+
+	if err := scanner.Err(); err != nil && err != io.EOF {
+		return fullText.String(), err
 	}
 
 	return fullText.String(), nil
@@ -283,27 +344,7 @@ func (c *Client) chatGeminiNative(ctx context.Context, messages []ChatMessage, t
 		modelName = "models/" + modelName
 	}
 
-	var contents []geminiChatContent
-	var systemInstruction *geminiChatContent
-
-	for _, msg := range messages {
-		if msg.Role == "system" {
-			systemInstruction = &geminiChatContent{
-				Parts: []geminiPart{{Text: msg.Content}},
-			}
-			continue
-		}
-
-		role := "user"
-		if msg.Role == "assistant" {
-			role = "model"
-		}
-
-		contents = append(contents, geminiChatContent{
-			Role:  role,
-			Parts: []geminiPart{{Text: msg.Content}},
-		})
-	}
+	contents, systemInstruction := formatGeminiContents(messages)
 
 	reqBody := geminiGenerateRequest{
 		Contents:          contents,

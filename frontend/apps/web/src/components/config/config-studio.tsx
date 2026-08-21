@@ -72,6 +72,21 @@ export function ConfigStudio() {
     setIsManualEdit(false)
   }
 
+  const addEnv = () => {
+    setEnvs([...envs, { key: '', value: '' }])
+    setIsManualEdit(false)
+  }
+  const insertEnvAbove = (index: number) => {
+    const copy = [...envs]
+    copy.splice(index, 0, { key: '', value: '' })
+    setEnvs(copy)
+    setIsManualEdit(false)
+  }
+  const removeEnv = (index: number) => {
+    setEnvs(envs.filter((_, i) => i !== index))
+    setIsManualEdit(false)
+  }
+
   const buildConfigObject = useCallback((): Record<string, unknown> => {
     const config: Record<string, unknown> = {
       app: appName || 'my-app',
@@ -482,55 +497,57 @@ export function ConfigStudio() {
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1)
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-6">
-      <div className="max-w-7xl w-full mx-auto space-y-6">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-3 sm:p-4 md:p-6">
+      <div className="max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
         {/* Title & Top Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-3">
           <div>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
                 <LuSettings className="w-4 h-4" />
               </div>
-              <h2 className="text-lg font-bold text-foreground">استودیوی تعاملی تولید کانفیگ (Config Studio)</h2>
+              <h2 className="text-base sm:text-lg font-bold text-foreground">استودیوی تعاملی تولید کانفیگ (Config Studio)</h2>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
               تولید و ویرایش هوشمند فایل‌های <code className="text-primary font-mono">liara.json</code> و <code className="text-primary font-mono">Dockerfile</code> با ادیتور یکپارچه و حالت Vim
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {isManualEdit && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleResetFromForm}
-                className="hidden sm:flex"
+                className="h-8 text-xs"
               >
                 <LuRotateCcw className="w-3.5 h-3.5" />
-                <span>همگام‌سازی از فرم</span>
+                <span className="hidden sm:inline">همگام‌سازی از فرم</span>
+                <span className="sm:hidden">همگام‌سازی</span>
               </Button>
             )}
             <Button
               variant="outline"
               size="sm"
               onClick={handleCopy}
+              className="h-8 text-xs"
             >
               {copied ? <LuCheck className="w-3.5 h-3.5 text-mint" /> : <LuCopy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'کپی شد' : 'کپی فایل'}</span>
+              <span>{copied ? 'کپی شد' : 'کپی'}</span>
             </Button>
             <Button
               variant="default"
               size="sm"
               onClick={handleDownload}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 text-xs"
             >
               <LuDownload className="w-3.5 h-3.5" />
-              <span>دانلود فایل</span>
+              <span>دانلود</span>
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
           {/* Controls Panel */}
           <div className="lg:col-span-5 space-y-4">
             {/* 1. Platform Selection */}
@@ -600,10 +617,10 @@ export function ConfigStudio() {
                   ۳. دیسک‌های پایدار ابری (Disks Mount)
                 </label>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={addDisk}
-                  className="h-7 text-xs"
+                  className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary"
                 >
                   <LuPlus className="w-3.5 h-3.5" />
                   <span>افزودن دیسک</span>
@@ -611,7 +628,18 @@ export function ConfigStudio() {
               </div>
 
               {disks.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground py-2">دیسکی تنظیم نشده است.</p>
+                <div className="text-center py-4 border border-dashed border-border rounded-xl text-xs text-muted-foreground space-y-2">
+                  <p>دیسکی تنظیم نشده است.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addDisk}
+                    className="text-xs h-7 gap-1"
+                  >
+                    <LuPlus className="w-3.5 h-3.5" />
+                    <span>افزودن دیسک</span>
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {disks.map((d, i) => (
@@ -645,12 +673,23 @@ export function ConfigStudio() {
                         variant="ghost"
                         size="icon"
                         onClick={() => removeDisk(i)}
-                        className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                        title="حذف دیسک"
+                        aria-label="حذف دیسک"
+                        className="h-8 w-8 text-destructive/80 hover:text-destructive hover:bg-destructive/10 shrink-0"
                       >
                         <LuTrash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addDisk}
+                    className="w-full text-xs h-8 border-dashed border-border hover:border-primary/50 hover:text-primary gap-1.5 mt-1"
+                  >
+                    <LuPlus className="w-3.5 h-3.5" />
+                    <span>افزودن دیسک دیگر</span>
+                  </Button>
                 </div>
               )}
             </Card>
@@ -685,71 +724,109 @@ export function ConfigStudio() {
                   ۵. متغیرهای محیطی (Environment)
                 </label>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => setEnvs([...envs, { key: '', value: '' }])}
-                  className="h-7 text-xs"
+                  onClick={addEnv}
+                  className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary"
                 >
                   <LuPlus className="w-3.5 h-3.5" />
-                  <span>افزودن</span>
+                  <span>افزودن متغیر</span>
                 </Button>
               </div>
 
               <div className="space-y-2">
-                {envs.map((env, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Input
-                      type="text"
-                      value={env.key}
-                      onChange={(e) => {
-                        const copy = [...envs]
-                        copy[i].key = e.target.value
-                        setEnvs(copy)
-                        setIsManualEdit(false)
-                      }}
-                      placeholder="KEY"
-                      className="font-mono text-xs"
-                    />
-                    <span className="text-muted-foreground text-xs">=</span>
-                    <Input
-                      type="text"
-                      value={env.value}
-                      onChange={(e) => {
-                        const copy = [...envs]
-                        copy[i].value = e.target.value
-                        setEnvs(copy)
-                        setIsManualEdit(false)
-                      }}
-                      placeholder="value"
-                      className="font-mono text-xs"
-                    />
+                {envs.length === 0 ? (
+                  <div className="text-center py-4 border border-dashed border-border rounded-xl text-xs text-muted-foreground space-y-2">
+                    <p>هیچ متغیر محیطی تعریف نشده است.</p>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEnvs(envs.filter((_, idx) => idx !== i))}
-                      className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                      variant="outline"
+                      size="sm"
+                      onClick={addEnv}
+                      className="text-xs h-7 gap-1 border-primary/30 text-primary hover:bg-primary/10"
                     >
-                      <LuTrash2 className="w-3.5 h-3.5" />
+                      <LuPlus className="w-3.5 h-3.5" />
+                      <span>افزودن متغیر محیطی</span>
                     </Button>
                   </div>
-                ))}
+                ) : (
+                  <>
+                    {envs.map((env, i) => (
+                      <div key={i} className="flex items-center gap-1.5 group">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => insertEnvAbove(i)}
+                          title="افزودن متغیر جدید در بالای این ردیف"
+                          aria-label="افزودن متغیر در بالا"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
+                        >
+                          <LuPlus className="w-3.5 h-3.5" />
+                        </Button>
+                        <Input
+                          type="text"
+                          value={env.key}
+                          onChange={(e) => {
+                            const copy = [...envs]
+                            copy[i].key = e.target.value
+                            setEnvs(copy)
+                            setIsManualEdit(false)
+                          }}
+                          placeholder="KEY"
+                          className="font-mono text-xs"
+                        />
+                        <span className="text-muted-foreground text-xs font-bold">=</span>
+                        <Input
+                          type="text"
+                          value={env.value}
+                          onChange={(e) => {
+                            const copy = [...envs]
+                            copy[i].value = e.target.value
+                            setEnvs(copy)
+                            setIsManualEdit(false)
+                          }}
+                          placeholder="value"
+                          className="font-mono text-xs"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeEnv(i)}
+                          title="حذف متغیر"
+                          aria-label="حذف متغیر"
+                          className="h-8 w-8 text-destructive/80 hover:text-destructive hover:bg-destructive/10 shrink-0"
+                        >
+                          <LuTrash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addEnv}
+                      className="w-full text-xs h-8 border-dashed border-border hover:border-primary/50 hover:text-primary gap-1.5 mt-1"
+                    >
+                      <LuPlus className="w-3.5 h-3.5" />
+                      <span>افزودن متغیر جدید</span>
+                    </Button>
+                  </>
+                )}
               </div>
             </Card>
           </div>
 
           {/* Interactive Code Editor */}
           <div className="lg:col-span-7 flex flex-col h-full space-y-4">
-            <Card className="overflow-hidden flex flex-col h-[560px] border border-border bg-muted/30 elevation-1">
+            <Card className="overflow-hidden flex flex-col h-[420px] sm:h-[480px] lg:h-[560px] border border-border bg-muted/30 elevation-1">
               {/* Editor Header Bar */}
-              <div className="bg-muted/50 border-b border-border px-3.5 py-2 flex items-center justify-between select-none">
+              <div className="bg-muted/50 border-b border-border px-2.5 sm:px-3.5 py-2 flex items-center justify-between select-none gap-2 flex-wrap sm:flex-nowrap">
                 <div className="flex items-center gap-1.5">
                   <Tabs value={activeView} onValueChange={setActiveView} className="bg-transparent p-0">
                     <TabsList className="bg-background/50 border border-border">
-                      <TabsTrigger value="json" className="gap-1.5">
+                      <TabsTrigger value="json" className="gap-1 sm:gap-1.5 text-xs">
                         <LuFileCode className="w-3.5 h-3.5" />
                         <span>liara.json</span>
                       </TabsTrigger>
-                      <TabsTrigger value="docker" className="gap-1.5">
+                      <TabsTrigger value="docker" className="gap-1 sm:gap-1.5 text-xs">
                         <LuFileCode2 className="w-3.5 h-3.5" />
                         <span>Dockerfile</span>
                       </TabsTrigger>

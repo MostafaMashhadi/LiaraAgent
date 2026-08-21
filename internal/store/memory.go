@@ -95,8 +95,8 @@ func (m *MemoryStore) Search(ctx context.Context, queryVector []float32, opts Fi
 		default:
 		}
 
-		// Category filter
-		if opts.Category != "" && entry.Chunk.Category != opts.Category {
+		// Category filter (case-insensitive)
+		if opts.Category != "" && !strings.EqualFold(entry.Chunk.Category, opts.Category) {
 			continue
 		}
 
