@@ -3,13 +3,22 @@
 # Stage 1: Build React frontend
 FROM node:20-alpine AS frontend-builder
 
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app/frontend
 
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml frontend/.npmrc ./
+COPY frontend/apps/web/package.json ./apps/web/
+COPY frontend/packages/ui/package.json ./packages/ui/
 
-COPY frontend/ ./
-RUN npm run build
+RUN pnpm install --frozen-lockfile
+
+COPY frontend/apps/web/ ./apps/web/
+COPY frontend/packages/ui/ ./packages/ui/
+COPY frontend/tsconfig.json ./
+
+WORKDIR /app/frontend/apps/web
+RUN pnpm run build
 
 # Stage 2: Build Go backend
 FROM golang:1.23-alpine AS builder
