@@ -432,8 +432,12 @@ func TestAngularGettingStartedMDXCleanup(t *testing.T) {
 }
 
 func TestKiloCodeMDXCleanup(t *testing.T) {
+	filePath := "../../data/docs/src/pages/ai/connect-to-service/kilo-code.mdx"
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		t.Skip("kilo-code.mdx not present in local checkout, skipping")
+	}
 	p := NewParser(1000, 50)
-	doc, err := p.ParseFile("../../data/docs/src/pages/ai/connect-to-service/kilo-code.mdx", "../../data/docs/src/pages")
+	doc, err := p.ParseFile(filePath, "../../data/docs/src/pages")
 	if err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}

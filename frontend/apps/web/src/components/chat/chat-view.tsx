@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LuSend, LuBot, LuCopy, LuCheck, LuMic, LuMicOff, LuBookOpen, LuClock, LuRefreshCw, LuArrowLeft, LuSparkles } from 'react-icons/lu'
+import { LuSend, LuBot, LuCopy, LuCheck, LuBookOpen, LuClock, LuRefreshCw, LuArrowLeft, LuSparkles } from 'react-icons/lu'
 import { renderMarkdown } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { ChatMessage, DocSource } from '@/types'
@@ -14,7 +14,6 @@ interface ChatViewProps {
 
 export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming, onClearSession }: ChatViewProps) {
   const [input, setInput] = useState('')
-  const [isListening, setIsListening] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -50,35 +49,6 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
     setTimeout(() => setCopiedIndex(null), 2000)
   }
 
-  const toggleVoiceInput = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert('مرورگر شما از ورودی صوتی پشتیبانی نمی‌کند.')
-      return
-    }
-
-    if (isListening) {
-      setIsListening(false)
-      return
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    const recognition = new SpeechRecognition()
-    recognition.lang = 'fa-IR'
-    recognition.continuous = false
-    recognition.interimResults = false
-
-    recognition.onstart = () => setIsListening(true)
-    recognition.onresult = (event: { results: unknown[][] }) => {
-      const transcript = (event.results[0][0] as { transcript: string }).transcript
-      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript))
-      setIsListening(false)
-    }
-    recognition.onerror = () => setIsListening(false)
-    recognition.onend = () => setIsListening(false)
-
-    recognition.start()
-  }
-
   const samplePrompts = [
     { title: 'استقرار Node.js', prompt: 'چطور یک برنامه Node.js را در پلتفرم لیارا دیپلوی کنم؟' },
     { title: 'کانفیگ liara.json لاراول', prompt: 'فایل liara.json برای فریم‌ورک لاراول چگونه تنظیم می‌شود؟' },
@@ -92,26 +62,26 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto">
-        <div className={cn('max-w-3xl w-full mx-auto px-4 md:px-6', isEmpty ? 'py-10 md:py-16' : 'py-6 space-y-6')}>
+        <div className={cn('max-w-3xl w-full mx-auto px-3 sm:px-4 md:px-6', isEmpty ? 'py-8 md:py-16' : 'py-4 sm:py-6 space-y-4 sm:space-y-6')}>
           {/* Welcome Hero */}
           {isEmpty && (
-            <div className="flex flex-col items-center text-center pt-8 md:pt-16">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary mb-5">
-                <LuBot className="w-7 h-7" />
+            <div className="flex flex-col items-center text-center pt-4 sm:pt-8 md:pt-16">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary mb-4 sm:mb-5 shadow-sm">
+                <LuBot className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
-              <h1 className="text-2xl md:text-[28px] font-semibold text-foreground tracking-tight mb-2">
+              <h1 className="text-xl sm:text-2xl md:text-[28px] font-semibold text-foreground tracking-tight mb-2">
                 با چه کاری می‌توانم کمکتان کنم؟
               </h1>
-              <p className="text-sm text-muted-foreground max-w-md leading-relaxed mb-8">
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-md leading-relaxed mb-6 sm:mb-8 px-2">
                 سوال خود را درباره استقرار، دیباگ لاگ‌ها یا تنظیمات سرویس‌های لیارا بپرسید.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 w-full max-w-xl px-1">
                 {samplePrompts.map((p, i) => (
                   <button
                     key={i}
                     onClick={() => onSendMessage(p.prompt)}
-                    className="text-right p-3.5 rounded-2xl bg-card border border-border hover:bg-muted/60 hover:border-primary/40 text-sm transition-colors duration-150 flex items-center justify-between gap-2 group"
+                    className="text-right p-3 sm:p-3.5 rounded-2xl bg-card border border-border hover:bg-muted/60 hover:border-primary/40 text-xs sm:text-sm transition-colors duration-150 flex items-center justify-between gap-2 group shadow-sm"
                   >
                     <span className="font-medium text-foreground">{p.title}</span>
                     <LuArrowLeft className="w-4 h-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all" />
@@ -125,12 +95,12 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
           {messages.map((msg, idx) =>
             msg.role === 'user' ? (
               <div key={idx} className="flex justify-start">
-                <div className="max-w-[85%] md:max-w-[75%] rounded-3xl bg-secondary text-secondary-foreground px-4 py-2.5">
-                  <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
+                <div className="max-w-[92%] sm:max-w-[85%] md:max-w-[75%] rounded-3xl bg-secondary text-secondary-foreground px-3.5 py-2 sm:px-4 sm:py-2.5">
+                  <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed">{msg.content}</p>
                 </div>
               </div>
             ) : (
-              <div key={idx} className="group/msg flex items-start gap-3">
+              <div key={idx} className="group/msg flex items-start gap-2.5 sm:gap-3">
                 <div className="w-7 h-7 mt-0.5 rounded-lg bg-primary/10 border border-primary/15 shrink-0 flex items-center justify-center text-primary">
                   <LuBot className="w-4 h-4" />
                 </div>
@@ -269,18 +239,6 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
             />
 
             <div className="flex items-center gap-0.5 pb-0.5 pl-0.5">
-              <button
-                type="button"
-                onClick={toggleVoiceInput}
-                aria-label="ورودی صوتی"
-                className={cn(
-                  'h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
-                  isListening && 'bg-destructive/10 text-destructive hover:text-destructive animate-pulse'
-                )}
-              >
-                {isListening ? <LuMicOff className="h-[18px] w-[18px]" /> : <LuMic className="h-[18px] w-[18px]" />}
-              </button>
-
               {messages.length > 0 && (
                 <button
                   type="button"
