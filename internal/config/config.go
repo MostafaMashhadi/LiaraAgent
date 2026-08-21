@@ -50,7 +50,7 @@ func LoadConfig() *Config {
 		DocsDir:        getEnv("DOCS_DIR", "data/docs/src/pages"),
 		IndexPath:      getEnv("INDEX_PATH", "data/index.json"),
 		WebhookSecret:  getEnv("WEBHOOK_SECRET", ""),
-		ServerPort:     getEnv("PORT", "8080"),
+		ServerPort:     getEnv("PORT", "3000"),
 		RateLimit:      getEnvInt("RATE_LIMIT_RPM", 60),
 		CacheTTLMin:    getEnvInt("CACHE_TTL_MINUTES", 60),
 		DatabaseURL:    getEnv("DATABASE_URL", "postgres://liara:liarapass@localhost:5432/liaradb?sslmode=disable"),

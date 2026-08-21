@@ -59,7 +59,7 @@ COPY --from=builder /app/data/docs /app/docs
 COPY --from=builder /app/web/dist /app/web/dist
 COPY --from=builder /app/web/fallback /app/web/fallback
 
-ENV PORT=8080 \
+ENV PORT=3000 \
     REPO_DIR=/app/docs \
     DOCS_DIR=/app/docs/src/pages \
     INDEX_PATH=/app/data/index.json \
@@ -67,9 +67,9 @@ ENV PORT=8080 \
     ADMIN_EMAIL=admin@liara.ir \
     ADMIN_PASSWORD=Admin@Liara2026!
 
-EXPOSE 8080
+EXPOSE 3000
 
 HEALTHCHECK --interval=20s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/healthz || exit 1
+  CMD curl -f http://localhost:3000/healthz || exit 1
 
 ENTRYPOINT ["/app/server"]
