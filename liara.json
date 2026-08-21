@@ -1,6 +1,6 @@
 {
   "platform": "docker",
-  "app": "liara-helper-agent",
+  "app": "serene-spence-t-owdsdqn",
   "port": 8080,
   "disks": [
     {
