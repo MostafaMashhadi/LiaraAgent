@@ -9,6 +9,11 @@ bin/
 
 # Frontend dependencies & build output
 web/dist/
+vite-monorepo/**/node_modules/
+vite-monorepo/**/dist/
+vite-monorepo/.turbo/
+vite-monorepo/**/*.tsbuildinfo
+vite-monorepo/.npmrc
 
 # Generated index cache
 data/index.json
