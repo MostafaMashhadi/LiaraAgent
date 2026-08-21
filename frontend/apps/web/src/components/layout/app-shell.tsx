@@ -72,7 +72,7 @@ export function AppShell({ children, activeTab, setActiveTab, currentUser, onOpe
 
           <div className="flex items-center gap-1.5 shrink-0">
             <div
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border bg-muted/40 text-xs"
+              className="hidden lg:flex items-center gap-1.5 h-8 px-2.5 rounded-full border border-border bg-muted/40 text-xs"
               title={isWsConnected ? 'اتصال برقرار است' : 'اتصال برقرار نیست'}
             >
               <span

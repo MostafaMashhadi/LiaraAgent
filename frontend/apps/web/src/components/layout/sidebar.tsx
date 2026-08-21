@@ -52,7 +52,7 @@ export function Sidebar({ open, onToggle, activeTab, setActiveTab, sessions, act
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-sm font-bold text-foreground leading-tight whitespace-nowrap">
-                لیارا <span className="text-primary">دستیار هوشمند</span>
+                <span className="text-primary">دستیار هوشمند</span> لیارا
               </h1>
               <p className="text-[10px] text-muted-foreground">Platform Helper Agent</p>
             </div>
@@ -61,9 +61,9 @@ export function Sidebar({ open, onToggle, activeTab, setActiveTab, sessions, act
               aria-label="بستن نوار کناری"
               aria-expanded={open}
               title="بستن نوار کناری"
-              className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="h-10 w-10 shrink-0 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
-              <LuPanelRightClose className="w-4 h-4" />
+              <LuPanelRightClose className="w-5 h-5" />
             </button>
           </div>
         ) : (
@@ -73,9 +73,9 @@ export function Sidebar({ open, onToggle, activeTab, setActiveTab, sessions, act
               aria-label="باز کردن نوار کناری"
               aria-expanded={open}
               title="باز کردن نوار کناری"
-              className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
-              <LuPanelRightOpen className="w-4 h-4" />
+              <LuPanelRightOpen className="w-5 h-5" />
             </button>
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shrink-0">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
