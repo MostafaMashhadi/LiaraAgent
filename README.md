@@ -373,7 +373,7 @@ Authorization: Bearer <jwt>
 
 ## Deploy to Liara Cloud
 
-The repo includes a multi-stage `Dockerfile` and `liara.json` (`platform: docker`, port `8080`, persistent disk mounted at `/app/data`).
+The repo includes a multi-stage `Dockerfile` and `liara.json` (`platform: docker`, port `8080`, persistent disk mounted at `/app/data`). The bundled documentation is intentionally served from `/app/docs`, outside that disk; `/app/data` persists only the generated vector index.
 
 ```bash
 npm install -g @liara/cli

@@ -47,12 +47,16 @@ WORKDIR /app
 
 COPY --from=builder /app/bin/server /app/server
 COPY --from=builder /app/bin/cli /app/cli
-COPY --from=builder /app/data /app/data
+# Documentation is application content and must stay outside the persistent
+# index volume. Mounting a volume on /app/data would otherwise hide these files
+# at runtime and leave the document search API with nothing to index.
+COPY --from=builder /app/data/docs /app/docs
 COPY --from=builder /app/web/dist /app/web/dist
 COPY --from=builder /app/web/fallback /app/web/fallback
 
 ENV PORT=8080 \
-    DOCS_DIR=/app/data/docs/src/pages \
+    REPO_DIR=/app/docs \
+    DOCS_DIR=/app/docs/src/pages \
     INDEX_PATH=/app/data/index.json \
     JWT_SECRET=liara-agent-jwt-super-secret-key-2026 \
     ADMIN_EMAIL=admin@liara.ir \

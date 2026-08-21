@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LuSend, LuBot, LuCopy, LuCheck, LuBookOpen, LuClock, LuRefreshCw, LuArrowLeft, LuSparkles } from 'react-icons/lu'
+import { LuSend, LuBot, LuCopy, LuCheck, LuBookOpen, LuClock, LuArrowLeft, LuSparkles } from 'react-icons/lu'
 import { renderMarkdown } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { ChatMessage, DocSource } from '@/types'
@@ -9,10 +9,9 @@ interface ChatViewProps {
   onSendMessage: (text: string) => void
   streamingBuffer: string
   isStreaming: boolean
-  onClearSession: () => void
 }
 
-export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming, onClearSession }: ChatViewProps) {
+export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming }: ChatViewProps) {
   const [input, setInput] = useState('')
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -58,6 +57,43 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
 
   const isEmpty = messages.length === 0 && !isStreaming
 
+  const composer = (
+    <div className={cn('w-full px-4 md:px-6', isEmpty ? 'mt-6 sm:mt-8' : 'shrink-0 pb-4 pt-2 md:pb-5 bg-gradient-to-t from-background via-background to-transparent')}>
+      <div className="max-w-3xl mx-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="relative flex items-end gap-2 rounded-[26px] border border-border bg-card p-2 elevation-2 transition-colors focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15"
+        >
+          <label htmlFor="chat-message" className="sr-only">پیام شما</label>
+          <textarea
+            id="chat-message"
+            ref={textareaRef}
+            rows={1}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="سوال خود را بنویسید..."
+            dir="rtl"
+            className="flex-1 resize-none bg-transparent px-3 py-3 text-[15px] leading-relaxed placeholder:text-muted-foreground focus:outline-none max-h-[200px]"
+          />
+
+          <button
+            type="submit"
+            disabled={!input.trim() || isStreaming}
+            aria-label="ارسال پیام"
+            className="mb-0.5 ml-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-teal-glow active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:translate-y-0 disabled:hover:bg-primary"
+          >
+            <LuSend className="h-5 w-5 -scale-x-100" aria-hidden="true" />
+          </button>
+        </form>
+
+        <p className="text-center text-[11px] text-muted-foreground mt-2">
+          پاسخ‌ها توسط هوش مصنوعی تولید می‌شوند و ممکن است نیاز به بازبینی داشته باشند.
+        </p>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Messages Scroll Area */}
@@ -88,24 +124,25 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
                   </button>
                 ))}
               </div>
+              {composer}
             </div>
           )}
 
           {/* Message Thread */}
           {messages.map((msg, idx) =>
             msg.role === 'user' ? (
-              <div key={idx} className="flex justify-start">
-                <div className="max-w-[92%] sm:max-w-[85%] md:max-w-[75%] rounded-3xl bg-secondary text-secondary-foreground px-3.5 py-2 sm:px-4 sm:py-2.5">
+              <div key={idx} className="flex w-full justify-end" dir="ltr">
+                <div dir="rtl" className="max-w-[92%] sm:max-w-[85%] md:max-w-[75%] rounded-3xl bg-secondary text-secondary-foreground px-3.5 py-2 sm:px-4 sm:py-2.5 text-right">
                   <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed">{msg.content}</p>
                 </div>
               </div>
             ) : (
-              <div key={idx} className="group/msg flex items-start gap-2.5 sm:gap-3">
+              <div key={idx} className="group/msg flex w-full items-start justify-start gap-2.5 sm:gap-3" dir="ltr">
                 <div className="w-7 h-7 mt-0.5 rounded-lg bg-primary/10 border border-primary/15 shrink-0 flex items-center justify-center text-primary">
                   <LuBot className="w-4 h-4" />
                 </div>
 
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 max-w-[calc(92%-2.5rem)] sm:max-w-[calc(85%-2.5rem)] md:max-w-[calc(75%-2.5rem)] rounded-3xl border border-border/70 bg-card px-3.5 py-2 sm:px-4 sm:py-2.5 elevation-1" dir="rtl">
                   <div
                     className="markdown-body text-[15px] text-foreground"
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content || '') }}
@@ -186,11 +223,11 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
 
           {/* Live Streaming Bubble */}
           {isStreaming && (
-            <div className="flex items-start gap-3">
+            <div className="flex w-full items-start justify-start gap-3" dir="ltr">
               <div className="w-7 h-7 mt-0.5 rounded-lg bg-primary/10 border border-primary/15 shrink-0 flex items-center justify-center text-primary">
                 <LuBot className="w-4 h-4 animate-pulse" />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 max-w-[calc(92%-2.5rem)] sm:max-w-[calc(85%-2.5rem)] md:max-w-[calc(75%-2.5rem)] rounded-3xl border border-border/70 bg-card px-3.5 py-2 sm:px-4 sm:py-2.5 elevation-1" dir="rtl">
                 {streamingBuffer ? (
                   <div
                     className="markdown-body text-[15px] text-foreground"
@@ -199,14 +236,10 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
                     }}
                   />
                 ) : (
-                  <div className="flex items-center gap-1.5 py-2" aria-label="در حال نوشتن">
-                    {[0, 1, 2].map((i) => (
-                      <span
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce"
-                        style={{ animationDelay: `${i * 150}ms` }}
-                      />
-                    ))}
+                  <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-2" role="status" aria-live="polite" aria-busy="true">
+                    <span className="sr-only">دستیار در حال نوشتن پاسخ است</span>
+                    <span className="assistant-scan" aria-hidden="true" />
+                    <span className="text-xs font-medium text-primary">در حال تحلیل درخواست…</span>
                   </div>
                 )}
                 {streamingBuffer && (
@@ -220,54 +253,7 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
         </div>
       </div>
 
-      {/* Composer */}
-      <div className="shrink-0 px-4 pb-4 md:px-6 md:pb-5 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-        <div className="max-w-3xl mx-auto">
-          <form
-            onSubmit={handleSubmit}
-            className="relative flex items-end gap-1.5 rounded-[26px] border border-border bg-card p-2 elevation-2 focus-within:border-ring/60 transition-colors"
-          >
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="سوال خود را بنویسید..."
-              dir="rtl"
-              className="flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] leading-relaxed placeholder:text-muted-foreground focus:outline-none max-h-[200px]"
-            />
-
-            <div className="flex items-center gap-0.5 pb-0.5 pl-0.5">
-              {messages.length > 0 && (
-                <button
-                  type="button"
-                  onClick={onClearSession}
-                  aria-label="گفتگوی جدید"
-                  title="شروع گفتگوی جدید"
-                  className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                >
-                  <LuRefreshCw className="h-4 w-4" />
-                </button>
-              )}
-
-              <button
-                type="submit"
-                disabled={!input.trim() || isStreaming}
-                aria-label="ارسال پیام"
-                className="ml-1 h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:bg-primary/90 disabled:opacity-30 disabled:hover:bg-primary transition-all"
-              >
-                <LuSend className="h-4 w-4 -scale-x-100" />
-              </button>
-            </div>
-          </form>
-
-          <p className="text-center text-[11px] text-muted-foreground mt-2">
-            پاسخ‌ها توسط هوش مصنوعی تولید می‌شوند و ممکن است نیاز به بازبینی داشته باشند.
-          </p>
-        </div>
-      </div>
+      {!isEmpty && composer}
     </div>
   )
 }
-

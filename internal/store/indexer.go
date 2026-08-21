@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/block-p/liara-helper-agent/internal/parser"
@@ -54,6 +55,12 @@ func EnsureIndex(ctx context.Context, docsDir, indexPath string, embeddingDim in
 		"chunks", memStore.Count(),
 		"duration", time.Since(startTime),
 	)
+
+	// Track document hashes for incremental sync tracking
+	for _, doc := range result.Documents {
+		relPath, _ := filepath.Rel(docsDir, doc.FilePath)
+		memStore.SetDocumentHash(relPath, doc.ContentHash)
+	}
 
 	// 4. Generate embeddings in background or foreground if API key is provided
 	if llmClient == nil || llmClient.APIKey == "" {
