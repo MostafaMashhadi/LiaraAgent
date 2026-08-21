@@ -3,13 +3,21 @@
 # Stage 1: Build React frontend
 FROM node:20-alpine AS frontend-builder
 
-WORKDIR /app/frontend
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+WORKDIR /app/vite-monorepo
 
-COPY frontend/ ./
-RUN npm run build
+COPY vite-monorepo/package.json vite-monorepo/pnpm-lock.yaml vite-monorepo/pnpm-workspace.yaml ./
+COPY vite-monorepo/apps/test-ui/package.json ./apps/test-ui/
+COPY vite-monorepo/packages/ui/package.json ./packages/ui/
+
+RUN pnpm install --frozen-lockfile
+
+COPY vite-monorepo/apps/test-ui/ ./apps/test-ui/
+COPY vite-monorepo/packages/ui/ ./packages/ui/
+
+WORKDIR /app/vite-monorepo/apps/test-ui
+RUN pnpm run build
 
 # Stage 2: Build Go backend
 FROM golang:1.23-alpine AS builder

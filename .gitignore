@@ -8,7 +8,6 @@ bin/
 *.out
 
 # Frontend dependencies & build output
-frontend/node_modules/
 web/dist/
 
 # Generated index cache
