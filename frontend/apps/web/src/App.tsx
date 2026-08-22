@@ -38,6 +38,9 @@ export function App() {
   const [isWsConnected, setIsWsConnected] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const activeStreamTransportRef = useRef<'fetch' | 'websocket' | null>(null)
+  const stopRequestedRef = useRef(false)
 
   useEffect(() => {
     try {
@@ -227,6 +230,8 @@ export function App() {
 
   const handleIncomingStream = useCallback(
     (data: StreamMessage) => {
+      if (stopRequestedRef.current) return
+
       if (data.type === 'token') {
         setIsStreaming(true)
         setStreamingBuffer((prev) => {
@@ -236,6 +241,8 @@ export function App() {
         })
       } else if (data.type === 'done') {
         setIsStreaming(false)
+        activeStreamTransportRef.current = null
+        abortControllerRef.current = null
         const finalContent = (data.message && data.message.trim()) ? data.message : streamingBufferRef.current
         setStreamingBuffer('')
         streamingBufferRef.current = ''
@@ -251,6 +258,8 @@ export function App() {
         ])
       } else if (data.type === 'error') {
         setIsStreaming(false)
+        activeStreamTransportRef.current = null
+        abortControllerRef.current = null
         setStreamingBuffer('')
         streamingBufferRef.current = ''
         updateSessionMessages((prev) => [
@@ -317,6 +326,7 @@ export function App() {
     updateSessionMessages((prev) => [...prev, { role: 'user', content: text }])
     setStreamingBuffer('')
     streamingBufferRef.current = ''
+    stopRequestedRef.current = false
     setIsStreaming(true)
 
     // Check user preference for streaming mode (default: true)
@@ -328,6 +338,7 @@ export function App() {
     }
 
     if (isStreamPref && isWsConnected && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      activeStreamTransportRef.current = 'websocket'
       wsRef.current.send(
         JSON.stringify({
           message: text,
@@ -335,6 +346,9 @@ export function App() {
         })
       )
     } else {
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+      activeStreamTransportRef.current = 'fetch'
       try {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
@@ -345,6 +359,7 @@ export function App() {
         const res = await fetch(`/api/chat?stream=${isStreamPref ? 'true' : 'false'}`, {
           method: 'POST',
           headers,
+          signal: abortController.signal,
           body: JSON.stringify({
             message: text,
             session_id: activeSessionId,
@@ -419,6 +434,9 @@ export function App() {
           }
         }
       } catch (err) {
+        if (stopRequestedRef.current || (err instanceof DOMException && err.name === 'AbortError')) {
+          return
+        }
         setIsStreaming(false)
         setStreamingBuffer('')
         streamingBufferRef.current = ''
@@ -429,9 +447,39 @@ export function App() {
             content: `**خطا در ارتباط با سرور:**\n\n${err instanceof Error ? err.message : 'خطای ناشناخته'}`,
           },
         ])
+      } finally {
+        if (abortControllerRef.current === abortController) {
+          abortControllerRef.current = null
+          activeStreamTransportRef.current = null
+        }
       }
     }
   }
+
+  const handleStopMessage = useCallback(() => {
+    if (!isStreaming) return
+
+    stopRequestedRef.current = true
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+
+    if (activeStreamTransportRef.current === 'websocket') {
+      wsRef.current?.close()
+    }
+    activeStreamTransportRef.current = null
+
+    const partialResponse = streamingBufferRef.current.trim()
+    setIsStreaming(false)
+    setStreamingBuffer('')
+    streamingBufferRef.current = ''
+
+    if (partialResponse) {
+      updateSessionMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: partialResponse },
+      ])
+    }
+  }, [isStreaming, updateSessionMessages])
 
   const handleNewSession = useCallback(() => {
     const newId = 'sess_' + Math.random().toString(36).substring(2, 9)
@@ -513,6 +561,7 @@ export function App() {
         <ChatView
           messages={messages}
           onSendMessage={handleSendMessage}
+          onStopMessage={handleStopMessage}
           streamingBuffer={streamingBuffer}
           isStreaming={isStreaming}
         />
