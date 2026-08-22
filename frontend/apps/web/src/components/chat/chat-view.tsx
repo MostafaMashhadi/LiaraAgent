@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LuSend, LuBot, LuCopy, LuCheck, LuBookOpen, LuClock, LuArrowLeft, LuSparkles } from 'react-icons/lu'
+import { LuArrowUp, LuBot, LuCopy, LuCheck, LuBookOpen, LuClock, LuArrowLeft, LuSparkles, LuSquare } from 'react-icons/lu'
 import { renderMarkdown } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import { ChatMessage, DocSource } from '@/types'
@@ -7,19 +7,27 @@ import { ChatMessage, DocSource } from '@/types'
 interface ChatViewProps {
   messages: ChatMessage[]
   onSendMessage: (text: string) => void
+  onStopMessage: () => void
   streamingBuffer: string
   isStreaming: boolean
 }
 
-export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming }: ChatViewProps) {
+export function ChatView({ messages, onSendMessage, onStopMessage, streamingBuffer, isStreaming }: ChatViewProps) {
   const [input, setInput] = useState('')
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
-  const chatEndRef = useRef<HTMLDivElement>(null)
+  const messagesViewportRef = useRef<HTMLDivElement>(null)
+  const shouldAutoScrollRef = useRef(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingBuffer])
+    const viewport = messagesViewportRef.current
+    if (!viewport || !shouldAutoScrollRef.current) return
+
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior: streamingBuffer ? 'auto' : 'smooth',
+    })
+  }, [messages.length, streamingBuffer])
 
   useEffect(() => {
     const el = textareaRef.current
@@ -48,6 +56,12 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
     setTimeout(() => setCopiedIndex(null), 2000)
   }
 
+  const handleMessagesScroll = () => {
+    const viewport = messagesViewportRef.current
+    if (!viewport) return
+    shouldAutoScrollRef.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80
+  }
+
   const samplePrompts = [
     { title: 'استقرار Node.js', prompt: 'چطور یک برنامه Node.js را در پلتفرم لیارا دیپلوی کنم؟' },
     { title: 'کانفیگ liara.json لاراول', prompt: 'فایل liara.json برای فریم‌ورک لاراول چگونه تنظیم می‌شود؟' },
@@ -58,8 +72,15 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
   const isEmpty = messages.length === 0 && !isStreaming
 
   const composer = (
-    <div className={cn('w-full px-4 md:px-6', isEmpty ? 'mt-6 sm:mt-8' : 'shrink-0 pb-4 pt-2 md:pb-5 bg-gradient-to-t from-background via-background to-transparent')}>
-      <div className="max-w-3xl mx-auto">
+    <div
+      className={cn(
+        'z-20 w-full shrink-0 bg-gradient-to-t from-background via-background to-transparent px-4 pb-4 pt-2 md:px-6 md:pb-5',
+        isEmpty
+          ? 'md:pointer-events-none md:absolute md:inset-x-0 md:top-1/2 md:-translate-y-1/2 md:pb-0 md:pt-0'
+          : ''
+      )}
+    >
+      <div className="pointer-events-auto mx-auto max-w-4xl">
         <form
           onSubmit={handleSubmit}
           className="relative flex items-end gap-2 rounded-[26px] border border-border bg-card p-2 elevation-2 transition-colors focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15"
@@ -77,14 +98,25 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
             className="flex-1 resize-none bg-transparent px-3 py-3 text-base sm:text-[15px] leading-relaxed placeholder:text-muted-foreground focus:outline-none max-h-[200px]"
           />
 
-          <button
-            type="submit"
-            disabled={!input.trim() || isStreaming}
-            aria-label="ارسال پیام"
-            className="mb-0.5 ml-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-teal-glow active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:translate-y-0 disabled:hover:bg-primary"
-          >
-            <LuSend className="h-5 w-5 -scale-x-100" aria-hidden="true" />
-          </button>
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={onStopMessage}
+              aria-label="توقف پاسخ"
+              className="mb-0.5 ml-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:scale-105 hover:bg-primary/90 hover:shadow-teal-glow active:scale-95"
+            >
+              <LuSquare className="h-4 w-4 fill-current" aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              aria-label="ارسال پیام"
+              className="mb-0.5 ml-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:scale-105 hover:bg-primary/90 hover:shadow-teal-glow active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:scale-100"
+            >
+              <LuArrowUp className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
         </form>
 
         <p className="text-center text-[11px] text-muted-foreground mt-2">
@@ -95,13 +127,13 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
   )
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto">
-        <div className={cn('max-w-3xl w-full mx-auto px-3 sm:px-4 md:px-6', isEmpty ? 'py-8 md:py-16' : 'py-4 sm:py-6 space-y-4 sm:space-y-6')}>
+      <div ref={messagesViewportRef} onScroll={handleMessagesScroll} className="min-h-0 flex-1 overflow-y-auto">
+        <div className={cn('max-w-4xl w-full mx-auto px-3 sm:px-4 md:px-6', isEmpty ? 'py-8 md:py-16' : 'py-4 sm:py-6 space-y-4 sm:space-y-6')}>
           {/* Welcome Hero */}
           {isEmpty && (
-            <div className="flex flex-col items-center text-center pt-4 sm:pt-8 md:pt-16">
+            <div className="flex flex-col items-center text-center pt-4 sm:pt-8 md:pt-6">
               <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary mb-4 sm:mb-5 shadow-sm">
                 <LuBot className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
@@ -112,7 +144,7 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
                 سوال خود را درباره استقرار، دیباگ لاگ‌ها یا تنظیمات سرویس‌های لیارا بپرسید.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 w-full max-w-xl px-1">
+              <div className="grid w-full max-w-xl grid-cols-1 gap-2 px-1 sm:grid-cols-2 sm:gap-2.5">
                 {samplePrompts.map((p, i) => (
                   <button
                     key={i}
@@ -124,7 +156,6 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
                   </button>
                 ))}
               </div>
-              {composer}
             </div>
           )}
 
@@ -132,7 +163,7 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
           {messages.map((msg, idx) =>
             msg.role === 'user' ? (
               <div key={idx} className="flex w-full justify-end" dir="ltr">
-                <div dir="rtl" className="max-w-[92%] sm:max-w-[85%] md:max-w-[75%] rounded-3xl bg-secondary text-secondary-foreground px-3.5 py-2 sm:px-4 sm:py-2.5 text-right">
+                <div dir="rtl" className="max-w-[96%] sm:max-w-[92%] md:max-w-[88%] rounded-3xl bg-secondary text-secondary-foreground px-3.5 py-2 sm:px-4 sm:py-2.5 text-right">
                   <p className="whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed">{msg.content}</p>
                 </div>
               </div>
@@ -142,7 +173,7 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
                   <LuBot className="w-4 h-4" />
                 </div>
 
-                <div className="min-w-0 max-w-[calc(92%-2.5rem)] sm:max-w-[calc(85%-2.5rem)] md:max-w-[calc(75%-2.5rem)] rounded-3xl border border-border/70 bg-card px-3.5 py-2 sm:px-4 sm:py-2.5 elevation-1" dir="rtl">
+                <div className="min-w-0 max-w-[calc(96%-2.5rem)] sm:max-w-[calc(92%-2.5rem)] md:max-w-[calc(88%-2.5rem)] rounded-3xl border border-border/70 bg-card px-3.5 py-2 sm:px-4 sm:py-2.5 elevation-1" dir="rtl">
                   <div
                     className="markdown-body text-[15px] text-foreground"
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content || '') }}
@@ -227,7 +258,7 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
               <div className="w-7 h-7 mt-0.5 rounded-lg bg-primary/10 border border-primary/15 shrink-0 flex items-center justify-center text-primary">
                 <LuBot className="w-4 h-4 animate-pulse" />
               </div>
-              <div className="min-w-0 max-w-[calc(92%-2.5rem)] sm:max-w-[calc(85%-2.5rem)] md:max-w-[calc(75%-2.5rem)] rounded-3xl border border-border/70 bg-card px-3.5 py-2 sm:px-4 sm:py-2.5 elevation-1" dir="rtl">
+              <div className="min-w-0 max-w-[calc(96%-2.5rem)] sm:max-w-[calc(92%-2.5rem)] md:max-w-[calc(88%-2.5rem)] rounded-3xl border border-border/70 bg-card px-3.5 py-2 sm:px-4 sm:py-2.5 elevation-1" dir="rtl">
                 {streamingBuffer ? (
                   <div
                     className="markdown-body text-[15px] text-foreground"
@@ -248,12 +279,10 @@ export function ChatView({ messages, onSendMessage, streamingBuffer, isStreaming
               </div>
             </div>
           )}
-
-          <div ref={chatEndRef} />
         </div>
       </div>
 
-      {!isEmpty && composer}
+      {composer}
     </div>
   )
 }
