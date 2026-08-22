@@ -2,7 +2,6 @@ services:
   # 1. PostgreSQL Database Service
   postgres:
     image: postgres:16-alpine
-    container_name: liara-helper-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-liara}
@@ -25,7 +24,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: liara-helper-app
     restart: unless-stopped
     depends_on:
       postgres:

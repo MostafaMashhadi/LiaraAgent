@@ -23,7 +23,6 @@ interface AppShellProps {
   onOpenAuth: () => void
   onLogout: () => void
   onOpenSettings: () => void
-  isWsConnected: boolean
   onSelectDoc: (doc: DocResult) => void
   onDeleteSession: (sessId: string) => void
   onNewSession: () => void
@@ -40,7 +39,6 @@ export function AppShell({
   onOpenAuth,
   onLogout,
   onOpenSettings,
-  isWsConnected,
   onSelectDoc,
   sessions,
   activeSessionId,
