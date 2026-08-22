@@ -149,7 +149,7 @@ export function App() {
         fetchSessionMessages(activeSessionId)
       }
     }
-  }, [activeSessionId, fetchSessionMessages])
+  }, [activeSessionId, fetchSessionMessages, sessions])
 
   const handleLoginSuccess = (token: string, user: LiaraUser) => {
     setAuthToken(token)
@@ -324,7 +324,7 @@ export function App() {
     try {
       isStreamPref = localStorage.getItem('liara_ai_stream') !== 'false'
     } catch {
-      isStreamPref = true
+      // Keep the default when localStorage is unavailable.
     }
 
     if (isStreamPref && isWsConnected && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -502,7 +502,6 @@ export function App() {
       onOpenAuth={() => setShowAuthModal(true)}
       onLogout={handleLogout}
       onOpenSettings={() => setShowSettingsModal(true)}
-      isWsConnected={isWsConnected}
       onSelectDoc={handleSelectDoc}
       onDeleteSession={handleDeleteSession}
       onNewSession={handleNewSession}

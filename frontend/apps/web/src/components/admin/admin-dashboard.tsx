@@ -119,6 +119,7 @@ export function AdminDashboard({ authToken }: AdminDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncReport, setSyncReport] = useState<string | null>(null)
+  const [timelineNow] = useState(() => Date.now())
 
   const authHeaders = useCallback((): Record<string, string> => {
     const headers: Record<string, string> = {}
@@ -174,9 +175,8 @@ export function AdminDashboard({ authToken }: AdminDashboardProps) {
   // Requests per hour over the last 24h
   const timeline = React.useMemo(() => {
     const buckets = new Map<number, { requests: number; tokens: number; errors: number }>()
-    const now = Date.now()
     for (let i = 23; i >= 0; i--) {
-      const hourStart = new Date(now - i * 3600_000)
+      const hourStart = new Date(timelineNow - i * 3600_000)
       hourStart.setMinutes(0, 0, 0)
       buckets.set(hourStart.getTime(), { requests: 0, tokens: 0, errors: 0 })
     }
@@ -194,9 +194,7 @@ export function AdminDashboard({ authToken }: AdminDashboardProps) {
       time: new Date(ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
       ...v,
     }))
-  }, [logs])
-
-  const hasTimelineData = timeline.some((d) => d.requests > 0)
+  }, [logs, timelineNow])
 
   // Prompt vs completion token split
   const tokenSplit = React.useMemo(() => {
