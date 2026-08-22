@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { LuArrowUp, LuBot, LuCopy, LuCheck, LuBookOpen, LuClock, LuArrowLeft, LuSparkles, LuSquare } from 'react-icons/lu'
 import { renderMarkdown } from '@/lib/markdown'
 import { ChatMessage, DocSource } from '@/types'
@@ -18,21 +18,37 @@ export function ChatView({ messages, onSendMessage, onStopMessage, streamingBuff
   const shouldAutoScrollRef = useRef(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const scrollToBottom = useCallback((smooth = true) => {
+    const viewport = messagesViewportRef.current
+    if (!viewport) return
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior: smooth ? 'smooth' : 'auto',
+    })
+  }, [])
+
   useEffect(() => {
     const viewport = messagesViewportRef.current
-    if (!viewport || !shouldAutoScrollRef.current) return
+    if (!viewport) return
 
-    const scrollToBottom = () => {
-      viewport.scrollTo({
-        top: viewport.scrollHeight,
-        behavior: streamingBuffer ? 'auto' : 'smooth',
-      })
-    }
+    const scrollContainer = viewport
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(scrollToBottom)
+    const observer = new MutationObserver(() => {
+      if (shouldAutoScrollRef.current) {
+        scrollToBottom(false)
+      }
     })
-  }, [messages.length, streamingBuffer])
+
+    observer.observe(scrollContainer, { childList: true, subtree: true, characterData: true })
+
+    return () => observer.disconnect()
+  }, [scrollToBottom])
+
+  useEffect(() => {
+    if (shouldAutoScrollRef.current) {
+      scrollToBottom(!!streamingBuffer)
+    }
+  }, [messages.length, streamingBuffer, scrollToBottom])
 
   useEffect(() => {
     const el = textareaRef.current
@@ -44,6 +60,7 @@ export function ChatView({ messages, onSendMessage, onStopMessage, streamingBuff
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!input.trim() || isStreaming) return
+    shouldAutoScrollRef.current = true
     onSendMessage(input.trim())
     setInput('')
   }
