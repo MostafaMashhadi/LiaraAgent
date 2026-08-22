@@ -29,9 +29,9 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "${PORT:-8080}:8080"
+      - "${PORT:-3000}:3000"
     environment:
-      PORT: 8080
+      PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-liara}:${POSTGRES_PASSWORD:-liarapass}@postgres:5432/${POSTGRES_DB:-liaradb}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:-liara-agent-jwt-super-secret-key-2026}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@liara.ir}

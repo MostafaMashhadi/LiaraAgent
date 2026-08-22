@@ -1,7 +1,7 @@
 {
   "platform": "docker",
   "app": "serene-spence-t-owdsdqn",
-  "port": 8080,
+  "port": 3000,
   "disks": [
     {
       "name": "agent-data",

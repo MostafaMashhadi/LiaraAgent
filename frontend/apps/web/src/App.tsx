@@ -222,21 +222,28 @@ export function App() {
     [activeSessionId]
   )
 
+  const streamingBufferRef = useRef('')
   const handleIncomingStreamRef = useRef<(data: StreamMessage) => void>(() => {})
 
   const handleIncomingStream = useCallback(
     (data: StreamMessage) => {
       if (data.type === 'token') {
         setIsStreaming(true)
-        setStreamingBuffer((prev) => prev + (data.token || ''))
+        setStreamingBuffer((prev) => {
+          const next = prev + (data.token || '')
+          streamingBufferRef.current = next
+          return next
+        })
       } else if (data.type === 'done') {
         setIsStreaming(false)
+        const finalContent = (data.message && data.message.trim()) ? data.message : streamingBufferRef.current
         setStreamingBuffer('')
+        streamingBufferRef.current = ''
         updateSessionMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: data.message || '',
+            content: finalContent || '',
             sources: data.sources,
             suggested_next: data.suggested_next,
             duration_ms: data.duration_ms,
@@ -245,6 +252,7 @@ export function App() {
       } else if (data.type === 'error') {
         setIsStreaming(false)
         setStreamingBuffer('')
+        streamingBufferRef.current = ''
         updateSessionMessages((prev) => [
           ...prev,
           {
@@ -308,9 +316,18 @@ export function App() {
 
     updateSessionMessages((prev) => [...prev, { role: 'user', content: text }])
     setStreamingBuffer('')
+    streamingBufferRef.current = ''
     setIsStreaming(true)
 
-    if (isWsConnected && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    // Check user preference for streaming mode (default: true)
+    let isStreamPref = true
+    try {
+      isStreamPref = localStorage.getItem('liara_ai_stream') !== 'false'
+    } catch {
+      isStreamPref = true
+    }
+
+    if (isStreamPref && isWsConnected && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(
         JSON.stringify({
           message: text,
@@ -321,11 +338,11 @@ export function App() {
       try {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-          Accept: 'text/event-stream, application/json',
+          Accept: isStreamPref ? 'text/event-stream, application/json' : 'application/json',
         }
         if (authToken) headers['Authorization'] = `Bearer ${authToken}`
 
-        const res = await fetch('/api/chat?stream=true', {
+        const res = await fetch(`/api/chat?stream=${isStreamPref ? 'true' : 'false'}`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -340,7 +357,7 @@ export function App() {
         }
 
         const contentType = res.headers.get('content-type') || ''
-        if (contentType.includes('application/json')) {
+        if (contentType.includes('application/json') || !isStreamPref) {
           const data = await res.json()
           handleIncomingStream({
             type: 'done',
@@ -355,43 +372,56 @@ export function App() {
 
         const reader = res.body?.getReader()
         const decoder = new TextDecoder('utf-8')
-        let partial = ''
+        let buffer = ''
 
-        if (!reader) throw new Error('No reader available')
+        if (!reader) throw new Error('جریان داده پاسخ در دسترس نیست')
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          partial += decoder.decode(value, { stream: true })
-          const lines = partial.split('\n')
-          partial = lines.pop() || ''
+          buffer += decoder.decode(value, { stream: true })
+          let eventEndIndex: number
+          while ((eventEndIndex = buffer.indexOf('\n\n')) !== -1) {
+            const rawEvent = buffer.slice(0, eventEndIndex)
+            buffer = buffer.slice(eventEndIndex + 2)
 
-          for (const line of lines) {
-            const trimmed = line.trim()
-            if (!trimmed || !trimmed.startsWith('data:')) continue
-            const jsonStr = trimmed.replace(/^data:\s*/, '')
-            try {
-              const data: StreamMessage = JSON.parse(jsonStr)
-              handleIncomingStream(data)
-            } catch {
-              // ignore parse errors
+            const lines = rawEvent.split('\n')
+            for (const line of lines) {
+              const trimmed = line.trim()
+              if (!trimmed || !trimmed.startsWith('data:')) continue
+              const dataStr = trimmed.slice(5).trim()
+              if (!dataStr) continue
+              try {
+                const data: StreamMessage = JSON.parse(dataStr)
+                handleIncomingStream(data)
+              } catch (err) {
+                console.warn('Failed to parse SSE chunk', err, dataStr)
+              }
             }
           }
         }
 
-        if (partial.trim() && partial.trim().startsWith('data:')) {
-          try {
-            const jsonStr = partial.trim().replace(/^data:\s*/, '')
-            const data: StreamMessage = JSON.parse(jsonStr)
-            handleIncomingStream(data)
-          } catch {
-            // ignore parse errors
+        // Flush remaining buffer
+        if (buffer.trim()) {
+          const lines = buffer.split('\n')
+          for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed || !trimmed.startsWith('data:')) continue
+            const dataStr = trimmed.slice(5).trim()
+            if (!dataStr) continue
+            try {
+              const data: StreamMessage = JSON.parse(dataStr)
+              handleIncomingStream(data)
+            } catch {
+              // ignore
+            }
           }
         }
       } catch (err) {
         setIsStreaming(false)
         setStreamingBuffer('')
+        streamingBufferRef.current = ''
         updateSessionMessages((prev) => [
           ...prev,
           {
